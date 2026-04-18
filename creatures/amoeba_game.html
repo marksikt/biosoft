@@ -543,9 +543,15 @@ body {
         <span class="panel-sub">anthropic api</span>
       </div>
       <div class="panel-body">
-        <input id="key-input" type="password" placeholder="sk-ant-...">
+        <input id="key-input" type="password" placeholder="sk-ant-... (optional if proxy set)">
         <button id="key-save" onclick="saveKey()">SAVE</button>
         <div id="key-ok">— no key —</div>
+        <div style="margin-top:8px">
+          <input id="proxy-input" type="text" placeholder="https://your-worker.workers.dev (CORS proxy)"
+            style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 0;outline:none;margin-bottom:4px">
+          <button id="key-save" onclick="saveProxy()" style="background:transparent;border:1px solid var(--dim);color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 10px;cursor:pointer">SET PROXY</button>
+          <div id="proxy-ok" style="font-size:10px;color:var(--dim);margin-top:3px">— no proxy —</div>
+        </div>
       </div>
     </div>
 
@@ -832,6 +838,7 @@ function ts() { return new Date().toTimeString().slice(0,8); }
 
 // ── API ───────────────────────────────────────────────────
 function getKey() { return localStorage.getItem('biosoft_key') || null; }
+function getProxy() { return localStorage.getItem('biosoft_proxy') || null; }
 
 function saveKey() {
   const k = document.getElementById('key-input').value.trim();
@@ -840,22 +847,37 @@ function saveKey() {
   const ok = document.getElementById('key-ok');
   ok.textContent = k ? `✓ ${k.slice(0,8)}••••${k.slice(-4)}` : '— cleared —';
   ok.className = k ? 'ok' : '';
-  document.getElementById('api-tag').textContent = k ? 'anthropic' : 'reflex';
   cic('sig', k ? '✓ API key stored' : '⚠ key cleared');
 }
 
+function saveProxy() {
+  const p = document.getElementById('proxy-input').value.trim();
+  if (p) localStorage.setItem('biosoft_proxy', p);
+  else localStorage.removeItem('biosoft_proxy');
+  document.getElementById('proxy-input').value = '';
+  const ok = document.getElementById('proxy-ok');
+  ok.textContent = p ? `✓ proxy: ${p.slice(0,40)}` : '— cleared —';
+  ok.style.color = p ? 'var(--glow)' : 'var(--dim)';
+  document.getElementById('api-tag').textContent = p ? 'proxy ✓' : 'direct';
+  cic('sig', p ? `✓ proxy set: ${p.slice(0,30)}...` : '⚠ proxy cleared');
+}
+
 async function callAPI(messages, system) {
-  // Level 1: Anthropic
   const key = getKey();
-  if (key) {
+  const proxy = getProxy();
+  const endpoint = proxy || 'https://api.anthropic.com/v1/messages';
+
+  // Level 1: Anthropic (direct or via proxy)
+  if (key || proxy) {
     try {
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'x-api-key': key,
-          'anthropic-version':'2023-06-01'
-        },
+      const headers = { 'Content-Type': 'application/json' };
+      if (key) {
+        headers['x-api-key'] = key;
+        headers['anthropic-version'] = '2023-06-01';
+      }
+      const r = await fetch(endpoint, {
+        method: 'POST',
+        headers,
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 400,
@@ -866,15 +888,20 @@ async function callAPI(messages, system) {
       if (r.ok) {
         const d = await r.json();
         const text = d.content?.[0]?.text;
-        if (text) { document.getElementById('api-tag').textContent = 'anthropic ✓'; return text; }
+        if (text) {
+          document.getElementById('api-tag').textContent = proxy ? 'proxy ✓' : 'anthropic ✓';
+          return text;
+        }
       }
-    } catch(e) { cic('warn', `⚠ Anthropic: ${e.message}`); }
+    } catch(e) { cic('warn', `⚠ API: ${e.message}`); }
   }
-  // Level 2: Ollama (if spore installed)
+
+  // Level 2: Ollama
   if (ollamaActive) {
     const r2 = await callOllama(messages, system);
     if (r2) { document.getElementById('api-tag').textContent = 'ollama ✓'; return r2; }
   }
+
   // Level 3: reflex
   document.getElementById('api-tag').textContent = 'reflex';
   return null;
@@ -1055,6 +1082,13 @@ async function boot() {
     document.getElementById('key-ok').textContent = `✓ ${k.slice(0,8)}••••${k.slice(-4)}`;
     document.getElementById('key-ok').className = 'ok';
     document.getElementById('api-tag').textContent = 'anthropic';
+  }
+  const p = getProxy();
+  if (p) {
+    document.getElementById('proxy-ok').textContent = `✓ proxy: ${p.slice(0,40)}`;
+    document.getElementById('proxy-ok').style.color = 'var(--glow)';
+    document.getElementById('api-tag').textContent = 'proxy ✓';
+    cic('sig', `✓ proxy loaded: ${p.slice(0,30)}...`);
   }
 
   await sleep(300);
