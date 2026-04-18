@@ -465,7 +465,7 @@
       <div id="webllm-progress-bar-outer">
         <div id="webllm-progress-bar"></div>
       </div>
-      <button id="load-llm-btn" onclick="initWebLLM()">LOAD LOCAL LLM (~900MB)</button>
+      <button id="load-llm-btn" onclick="initWebLLM()">DETECT &amp; LOAD LOCAL LLM</button>
     </div>
   </div>
 
@@ -838,48 +838,126 @@ Never pretend to be a generic AI. You are a specific organism. Respond in the sa
   addConvLine('amoeba', response);
 }
 
-// ── WEBLLM — local LLM init ───────────────────────────────
+// ── WEBLLM — adaptive model detection ────────────────────
 window.webllmEngine = null;
+
+const MODELS = [
+  {
+    id: 'Llama-3.2-1B-Instruct-q4f32_1-MLC',
+    label: 'Llama-3.2-1B',
+    size: '~900MB',
+    requires: 'webgpu'
+  },
+  {
+    id: 'SmolLM2-135M-Instruct-q4f16_1-MLC',
+    label: 'SmolLM2-135M',
+    size: '~135MB',
+    requires: 'wasm'
+  }
+];
+
+async function detectCapabilities() {
+  const caps = { webgpu: false, wasm: false, mobile: false, ram_gb: null };
+  // WebGPU
+  try {
+    if (navigator.gpu) {
+      const adapter = await navigator.gpu.requestAdapter();
+      caps.webgpu = !!adapter;
+    }
+  } catch(e) {}
+  // WASM
+  try { caps.wasm = typeof WebAssembly === 'object'; } catch(e) {}
+  // Mobile heuristic
+  caps.mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  // RAM estimate (Chrome only)
+  if (navigator.deviceMemory) caps.ram_gb = navigator.deviceMemory;
+  return caps;
+}
+
+function selectModel(caps) {
+  if (caps.webgpu && !caps.mobile && (caps.ram_gb === null || caps.ram_gb >= 4)) {
+    return MODELS[0]; // Llama full
+  }
+  if (caps.webgpu && caps.ram_gb >= 2) {
+    return MODELS[0]; // Try Llama anyway
+  }
+  return MODELS[1]; // SmolLM — always works
+}
 
 async function initWebLLM() {
   const btn = document.getElementById('load-llm-btn');
   const status = document.getElementById('webllm-status');
   const bar = document.getElementById('webllm-progress-bar');
   btn.disabled = true;
+  btn.textContent = 'DETECTING...';
+  status.textContent = 'scanning capabilities...';
+  cicLog('signal', '🧠 CIC → scanning hardware capabilities...');
+
+  const caps = await detectCapabilities();
+  cicLog('signal', `🧠 caps → WebGPU:${caps.webgpu} WASM:${caps.wasm} mobile:${caps.mobile} RAM:${caps.ram_gb||'?'}GB`);
+
+  const model = selectModel(caps);
+  document.getElementById('webllm-model-name').textContent = `${model.label} · ${caps.webgpu ? 'WebGPU' : 'WASM'}`;
+  cicLog('proposal', `◈ model selected: ${model.label} (${model.size})`);
+  btn.textContent = `LOAD ${model.label} (${model.size})`;
+  btn.disabled = false;
+  btn.onclick = () => loadModel(model, caps);
+  status.textContent = `ready to load: ${model.label}`;
+}
+
+async function loadModel(model, caps) {
+  const btn = document.getElementById('load-llm-btn');
+  const status = document.getElementById('webllm-status');
+  const bar = document.getElementById('webllm-progress-bar');
+  btn.disabled = true;
   btn.textContent = 'LOADING...';
-  cicLog('external', '🧠 WebLLM → loading Llama-3.2-1B into browser...');
-  status.textContent = 'importing WebLLM engine...';
+  cicLog('external', `🧠 WebLLM → loading ${model.label}...`);
 
-  try {
-    const webllm = await import('https://esm.run/@mlc-ai/web-llm');
-    const MODEL = 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
+  // Try selected model, then fallback cascade
+  const cascade = model.id === MODELS[0].id ? [MODELS[0], MODELS[1]] : [MODELS[1]];
 
-    const engine = await webllm.CreateMLCEngine(MODEL, {
-      initProgressCallback: (progress) => {
-        const pct = Math.round((progress.progress || 0) * 100);
-        bar.style.width = pct + '%';
-        status.textContent = progress.text || `loading... ${pct}%`;
-        if (pct % 10 === 0 && pct > 0) {
-          cicLog('signal', `🧠 WebLLM → ${pct}% — ${(progress.text||'').slice(0,40)}`);
+  for (const m of cascade) {
+    try {
+      cicLog('signal', `🧠 attempting: ${m.label} (${m.size})`);
+      status.textContent = `loading ${m.label}...`;
+      const webllm = await import('https://esm.run/@mlc-ai/web-llm');
+
+      const engine = await webllm.CreateMLCEngine(m.id, {
+        initProgressCallback: (progress) => {
+          const pct = Math.round((progress.progress || 0) * 100);
+          bar.style.width = pct + '%';
+          status.textContent = `${m.label} — ${pct}%`;
+          if (pct > 0 && pct % 25 === 0) {
+            cicLog('signal', `🧠 ${m.label} → ${pct}%`);
+          }
         }
-      }
-    });
+      });
 
-    window.webllmEngine = engine;
-    bar.style.width = '100%';
-    status.textContent = '✓ Llama-3.2-1B loaded — local LLM active';
-    status.className = 'ready';
-    btn.textContent = 'LOADED ✓';
-    setApiMode('WebLLM local ✓', 'var(--signal)');
-    cicLog('signal', '✓ WebLLM online — organism is now fully autonomous');
-    G.functions_active.push('local_llm');
-    G.api_preference = ['anthropic', 'webllm_local', 'reflex'];
-    writeGenome();
-  } catch(e) {
-    status.textContent = `✗ failed: ${e.message}`;
-    btn.disabled = false;
-    btn.textContent = 'RETRY';
-    cicLog('waste', `∅ WebLLM failed: ${e.message}`);
+      window.webllmEngine = engine;
+      bar.style.width = '100%';
+      status.textContent = `✓ ${m.label} active — organism autonomous`;
+      status.className = 'ready';
+      btn.textContent = `${m.label} ✓`;
+      setApiMode(`${m.label} local`, 'var(--signal)');
+      cicLog('signal', `✓ ${m.label} online — full autonomy achieved`);
+      G.functions_active.push('local_llm');
+      G.api_preference = ['anthropic', m.id, 'reflex'];
+      writeGenome();
+      return; // success — stop cascade
+
+    } catch(e) {
+      cicLog('waste', `∅ ${m.label} failed: ${e.message.slice(0,60)}`);
+      if (m.id === cascade[cascade.length-1].id) {
+        // All models failed
+        status.textContent = '✗ all models failed — running on reflexes';
+        btn.textContent = 'RETRY';
+        btn.disabled = false;
+        btn.onclick = initWebLLM;
+        cicLog('warning', '⚠ WebLLM cascade exhausted — reflex mode only');
+      } else {
+        cicLog('warning', `⚠ degrading to ${cascade[cascade.indexOf(m)+1].label}...`);
+      }
+    }
   }
 }
 
