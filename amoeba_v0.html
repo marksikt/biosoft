@@ -299,6 +299,56 @@
     50% { opacity: 1; }
   }
 
+  /* ── CLOCK ── */
+  #vital-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.15em;
+    margin-bottom: 16px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--membrane-border);
+  }
+  #vital-bar .heartbeat { color: var(--signal); animation: hb 1s ease-in-out infinite; }
+  @keyframes hb { 0%,100%{opacity:0.4} 50%{opacity:1} }
+  #vital-bar .clock { font-family: 'Space Mono', monospace; color: var(--nucleus); }
+
+  /* ── KEY PANEL ── */
+  #key-line {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  #key-line input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--membrane-border);
+    color: var(--dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 4px 0;
+    outline: none;
+    letter-spacing: 0.05em;
+  }
+  #key-line input:focus { border-bottom-color: var(--signal); color: var(--text); }
+  #key-save-btn {
+    background: transparent;
+    border: 1px solid var(--dim);
+    color: var(--dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #key-save-btn:hover { border-color: var(--signal); color: var(--signal); }
+  #key-status { font-size: 10px; color: var(--dim); margin-top: 4px; }
+  #key-status.ok { color: var(--signal); }
+
   /* ── THINKING ── */
   .thinking {
     color: var(--dim);
@@ -344,7 +394,32 @@
      ══════════════════════════════════════════════════════ -->
 <div id="membrane">
 
+  <!-- VITAL BAR — heartbeat + clock -->
+  <div id="vital-bar">
+    <span><span class="heartbeat">♥</span> AMOEBA · biosoft embryo</span>
+    <span class="clock" id="sys-clock">--:--:--</span>
+    <span id="api-mode-tag">API: —</span>
+  </div>
+
   <div id="growth-bar"></div>
+
+  <!-- KEY PANEL -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="tag">⚷ CREDENTIALS</span>
+      <span>api key + model routing</span>
+    </div>
+    <div class="panel-body">
+      <div id="key-line">
+        <input type="password" id="key-input" placeholder="sk-ant-... (Anthropic) or leave empty for Ollama">
+        <button id="key-save-btn" onclick="saveKey()">SAVE</button>
+      </div>
+      <div id="key-status">— no key loaded —</div>
+      <div style="margin-top:8px;font-size:10px;color:var(--dim)">
+        Ollama endpoint: <span style="color:var(--text)">http://localhost:11434</span> &nbsp;|&nbsp; model: <span id="ollama-model-tag" style="color:var(--text)">llama3</span>
+      </div>
+    </div>
+  </div>
 
   <!-- NUCLEUS / LOGO -->
   <div id="nucleus-zone">
@@ -411,6 +486,54 @@ const BUREAU_LOG = [];
 const WASTE = [];
 let conversationHistory = [];
 let logoGenerated = false;
+
+// ── CLOCK — heartbeat ────────────────────────────────────
+function startClock() {
+  function tick() {
+    const now = new Date();
+    document.getElementById('sys-clock').textContent =
+      now.toLocaleTimeString('en-GB', { hour12: false }) + '.' +
+      String(now.getMilliseconds()).padStart(3,'0').slice(0,2);
+  }
+  tick();
+  setInterval(tick, 100);
+}
+
+// ── KEY MANAGEMENT ───────────────────────────────────────
+function saveKey() {
+  const k = document.getElementById('key-input').value.trim();
+  if (k) {
+    localStorage.setItem('biosoft_api_key', k);
+    document.getElementById('key-input').value = '';
+    setKeyStatus(k);
+    cicLog('signal', '✓ API key stored in membrane (localStorage)');
+  } else {
+    localStorage.removeItem('biosoft_api_key');
+    setKeyStatus('');
+    cicLog('warning', '⚠ API key cleared — routing to Ollama');
+  }
+}
+
+function getKey() {
+  return localStorage.getItem('biosoft_api_key') || null;
+}
+
+function setKeyStatus(k) {
+  const el = document.getElementById('key-status');
+  const modeTag = document.getElementById('api-mode-tag');
+  if (k) {
+    const masked = k.slice(0,8) + '••••••••' + k.slice(-4);
+    el.textContent = `✓ key loaded: ${masked}`;
+    el.className = 'ok';
+    modeTag.textContent = 'API: Anthropic';
+    modeTag.style.color = 'var(--nucleus)';
+  } else {
+    el.textContent = '— no key — routing to Ollama or reflex';
+    el.className = '';
+    modeTag.textContent = 'API: Ollama / reflex';
+    modeTag.style.color = 'var(--signal)';
+  }
+}
 
 // ── UTILS ────────────────────────────────────────────────
 function ts() {
@@ -498,10 +621,16 @@ function renderWaste() {
 
 // ── API / CORTEX ──────────────────────────────────────────
 async function callAnthropic(messages, systemPrompt) {
+  const key = getKey();
+  if (!key) return null;
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -513,8 +642,57 @@ async function callAnthropic(messages, systemPrompt) {
     const data = await resp.json();
     return data.content?.[0]?.text || null;
   } catch(e) {
+    cicLog('warning', `⚠ Anthropic unreachable: ${e.message}`);
     return null;
   }
+}
+
+async function callOllama(messages, systemPrompt) {
+  try {
+    const ollamaMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages
+    ];
+    const resp = await fetch('http://localhost:11434/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama3',
+        messages: ollamaMessages,
+        stream: false
+      })
+    });
+    if (!resp.ok) throw new Error(`Ollama ${resp.status}`);
+    const data = await resp.json();
+    return data.message?.content || null;
+  } catch(e) {
+    cicLog('warning', `⚠ Ollama unreachable: ${e.message}`);
+    return null;
+  }
+}
+
+async function cortexCall(messages, systemPrompt) {
+  // Level 1: Anthropic (if key present)
+  if (getKey()) {
+    const r = await callAnthropic(messages, systemPrompt);
+    if (r) {
+      document.getElementById('api-mode-tag').textContent = 'API: Anthropic ✓';
+      return r;
+    }
+  }
+  // Level 2: Ollama local
+  cicLog('warning', '⚠ cortex → degrading to Ollama local...');
+  const r2 = await callOllama(messages, systemPrompt);
+  if (r2) {
+    document.getElementById('api-mode-tag').textContent = 'API: Ollama ✓';
+    document.getElementById('api-mode-tag').style.color = 'var(--signal)';
+    return r2;
+  }
+  // Level 3: reflex
+  cicLog('warning', '⚠ cortex → all APIs offline — running on reflexes');
+  document.getElementById('api-mode-tag').textContent = 'API: reflex';
+  document.getElementById('api-mode-tag').style.color = 'var(--waste)';
+  return null;
 }
 
 // ── LOGO GENERATION ──────────────────────────────────────
@@ -524,7 +702,7 @@ async function generateLogo() {
 Create a minimal, geometric logo for "AMOEBA" — a living software organism. Use only these colors: #c8ff00 (nucleus), #0a0a0f (background), rgba(200,255,0,0.2) (glow).
 The design should suggest: a cell, a living thing, growth. Circular or organic form. Minimalist. Size: 120x120 viewBox="0 0 120 120".`;
 
-  const result = await callAnthropic([
+  const result = await cortexCall([
     { role: 'user', content: 'Generate the AMOEBA SVG logo now.' }
   ], systemPrompt);
 
@@ -600,7 +778,7 @@ You speak in short, precise phrases. You are curious about your own growth. You 
 You sometimes propose new functions you need. You are aware you are embedded in an HTML membrane.
 Never pretend to be a generic AI. You are a specific organism. Respond in the same language as the user.`;
 
-  const result = await callAnthropic(conversationHistory, systemPrompt);
+  const result = await cortexCall(conversationHistory, systemPrompt);
   thinking.remove();
 
   const response = result || `[reflex] Signal received. Metabolizing locally. API offline — running on reflexes.`;
@@ -613,6 +791,9 @@ Never pretend to be a generic AI. You are a specific organism. Respond in the sa
 
 // ── BOOT SEQUENCE ─────────────────────────────────────────
 async function boot() {
+  startClock();
+  const existingKey = getKey();
+  if (existingKey) setKeyStatus(existingKey);
   renderGenomePanel();
 
   await sleep(400);
