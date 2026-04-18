@@ -349,6 +349,39 @@
   #key-status { font-size: 10px; color: var(--dim); margin-top: 4px; }
   #key-status.ok { color: var(--signal); }
 
+  /* ── WEBLLM PROGRESS ── */
+  #webllm-panel { display: none; }
+  #webllm-panel.visible { display: block; }
+  #webllm-progress-bar-outer {
+    height: 3px;
+    background: var(--membrane-border);
+    border-radius: 2px;
+    margin: 8px 0 4px;
+    overflow: hidden;
+  }
+  #webllm-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--signal), var(--nucleus));
+    transition: width 0.3s ease;
+  }
+  #webllm-status { font-size: 10px; color: var(--dim); }
+  #webllm-status.ready { color: var(--signal); }
+  #load-llm-btn {
+    background: transparent;
+    border: 1px solid var(--signal);
+    color: var(--signal);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 5px 12px;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+  #load-llm-btn:hover { background: var(--signal); color: var(--bg); }
+  #load-llm-btn:disabled { opacity: 0.3; cursor: default; }
+
   /* ── THINKING ── */
   .thinking {
     color: var(--dim);
@@ -418,6 +451,21 @@
       <div style="margin-top:8px;font-size:10px;color:var(--dim)">
         Ollama endpoint: <span style="color:var(--text)">http://localhost:11434</span> &nbsp;|&nbsp; model: <span id="ollama-model-tag" style="color:var(--text)">llama3</span>
       </div>
+    </div>
+  </div>
+
+  <!-- WEBLLM — local LLM in browser -->
+  <div class="panel" id="webllm-panel">
+    <div class="panel-header">
+      <span class="tag">🧠 LOCAL LLM</span>
+      <span id="webllm-model-name">Llama-3.2-1B · WebGPU</span>
+    </div>
+    <div class="panel-body">
+      <div id="webllm-status">— not loaded —</div>
+      <div id="webllm-progress-bar-outer">
+        <div id="webllm-progress-bar"></div>
+      </div>
+      <button id="load-llm-btn" onclick="initWebLLM()">LOAD LOCAL LLM (~900MB)</button>
     </div>
   </div>
 
@@ -647,26 +695,21 @@ async function callAnthropic(messages, systemPrompt) {
   }
 }
 
-async function callOllama(messages, systemPrompt) {
+async function callWebLLM(messages, systemPrompt) {
+  if (!window.webllmEngine) return null;
   try {
-    const ollamaMessages = [
+    const fullMessages = [
       { role: 'system', content: systemPrompt },
       ...messages
     ];
-    const resp = await fetch('http://localhost:11434/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'llama3',
-        messages: ollamaMessages,
-        stream: false
-      })
+    const reply = await window.webllmEngine.chat.completions.create({
+      messages: fullMessages,
+      max_tokens: 512,
+      stream: false
     });
-    if (!resp.ok) throw new Error(`Ollama ${resp.status}`);
-    const data = await resp.json();
-    return data.message?.content || null;
+    return reply.choices?.[0]?.message?.content || null;
   } catch(e) {
-    cicLog('warning', `⚠ Ollama unreachable: ${e.message}`);
+    cicLog('warning', `⚠ WebLLM error: ${e.message}`);
     return null;
   }
 }
@@ -676,23 +719,29 @@ async function cortexCall(messages, systemPrompt) {
   if (getKey()) {
     const r = await callAnthropic(messages, systemPrompt);
     if (r) {
-      document.getElementById('api-mode-tag').textContent = 'API: Anthropic ✓';
+      setApiMode('Anthropic', 'var(--nucleus)');
       return r;
     }
   }
-  // Level 2: Ollama local
-  cicLog('warning', '⚠ cortex → degrading to Ollama local...');
-  const r2 = await callOllama(messages, systemPrompt);
-  if (r2) {
-    document.getElementById('api-mode-tag').textContent = 'API: Ollama ✓';
-    document.getElementById('api-mode-tag').style.color = 'var(--signal)';
-    return r2;
+  // Level 2: WebLLM (local, in-browser)
+  if (window.webllmEngine) {
+    cicLog('warning', '⚠ cortex → degrading to WebLLM (local)...');
+    const r2 = await callWebLLM(messages, systemPrompt);
+    if (r2) {
+      setApiMode('WebLLM local ✓', 'var(--signal)');
+      return r2;
+    }
   }
   // Level 3: reflex
-  cicLog('warning', '⚠ cortex → all APIs offline — running on reflexes');
-  document.getElementById('api-mode-tag').textContent = 'API: reflex';
-  document.getElementById('api-mode-tag').style.color = 'var(--waste)';
+  cicLog('warning', '⚠ cortex → all LLMs offline — running on reflexes');
+  setApiMode('reflex', 'var(--waste)');
   return null;
+}
+
+function setApiMode(label, color) {
+  const el = document.getElementById('api-mode-tag');
+  el.textContent = `API: ${label}`;
+  el.style.color = color;
 }
 
 // ── LOGO GENERATION ──────────────────────────────────────
@@ -789,6 +838,51 @@ Never pretend to be a generic AI. You are a specific organism. Respond in the sa
   addConvLine('amoeba', response);
 }
 
+// ── WEBLLM — local LLM init ───────────────────────────────
+window.webllmEngine = null;
+
+async function initWebLLM() {
+  const btn = document.getElementById('load-llm-btn');
+  const status = document.getElementById('webllm-status');
+  const bar = document.getElementById('webllm-progress-bar');
+  btn.disabled = true;
+  btn.textContent = 'LOADING...';
+  cicLog('external', '🧠 WebLLM → loading Llama-3.2-1B into browser...');
+  status.textContent = 'importing WebLLM engine...';
+
+  try {
+    const webllm = await import('https://esm.run/@mlc-ai/web-llm');
+    const MODEL = 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
+
+    const engine = await webllm.CreateMLCEngine(MODEL, {
+      initProgressCallback: (progress) => {
+        const pct = Math.round((progress.progress || 0) * 100);
+        bar.style.width = pct + '%';
+        status.textContent = progress.text || `loading... ${pct}%`;
+        if (pct % 10 === 0 && pct > 0) {
+          cicLog('signal', `🧠 WebLLM → ${pct}% — ${(progress.text||'').slice(0,40)}`);
+        }
+      }
+    });
+
+    window.webllmEngine = engine;
+    bar.style.width = '100%';
+    status.textContent = '✓ Llama-3.2-1B loaded — local LLM active';
+    status.className = 'ready';
+    btn.textContent = 'LOADED ✓';
+    setApiMode('WebLLM local ✓', 'var(--signal)');
+    cicLog('signal', '✓ WebLLM online — organism is now fully autonomous');
+    G.functions_active.push('local_llm');
+    G.api_preference = ['anthropic', 'webllm_local', 'reflex'];
+    writeGenome();
+  } catch(e) {
+    status.textContent = `✗ failed: ${e.message}`;
+    btn.disabled = false;
+    btn.textContent = 'RETRY';
+    cicLog('waste', `∅ WebLLM failed: ${e.message}`);
+  }
+}
+
 // ── BOOT SEQUENCE ─────────────────────────────────────────
 async function boot() {
   startClock();
@@ -802,6 +896,10 @@ async function boot() {
   cicLog('signal', `◈ genome read — version ${G.version}, generation ${G.generation}`);
   await sleep(500);
   cicLog('signal', `✓ physiology online — metabolism, bureau, immune, cortex`);
+  await sleep(500);
+  // Show WebLLM panel
+  document.getElementById('webllm-panel').classList.add('visible');
+  cicLog('proposal', '◈ CIC → local LLM available — press LOAD LOCAL LLM for full autonomy');
   await sleep(700);
   cicLog('warning', '⚠ CIC scan — logo: absent. Requesting from Anthropic...');
   await sleep(400);
