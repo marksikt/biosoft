@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMOEBA v0 — biosoft embryo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --membrane: rgba(255,255,255,0.04);
+    --membrane-border: rgba(255,255,255,0.08);
+    --nucleus: #c8ff00;
+    --signal: #00ffc8;
+    --waste: #ff4444;
+    --text: #d0d0d0;
+    --dim: #555;
+    --pulse: 2.4s;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── MEMBRANE ── */
+  #membrane {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    position: relative;
+  }
+
+  /* ── NUCLEUS / LOGO ZONE ── */
+  #nucleus-zone {
+    text-align: center;
+    padding: 48px 0 32px;
+    position: relative;
+  }
+
+  #logo-container {
+    display: inline-block;
+    width: 120px;
+    height: 120px;
+    position: relative;
+  }
+
+  #logo-container::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    border: 1px solid var(--nucleus);
+    opacity: 0.3;
+    animation: pulse var(--pulse) ease-in-out infinite;
+  }
+
+  #logo-container::after {
+    content: '';
+    position: absolute;
+    inset: -24px;
+    border-radius: 50%;
+    border: 1px solid var(--nucleus);
+    opacity: 0.1;
+    animation: pulse var(--pulse) ease-in-out infinite 0.8s;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.3; }
+    50% { transform: scale(1.06); opacity: 0.6; }
+  }
+
+  #logo-svg {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: block;
+  }
+
+  #logo-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #1a1a2e, #0a0a0f);
+    border: 1px solid var(--membrane-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+    animation: logo-forming 3s ease-in-out infinite alternate;
+  }
+
+  @keyframes logo-forming {
+    from { box-shadow: 0 0 0 0 rgba(200,255,0,0); }
+    to   { box-shadow: 0 0 24px 4px rgba(200,255,0,0.12); }
+  }
+
+  #organism-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    color: var(--nucleus);
+    margin-top: 20px;
+    text-transform: uppercase;
+  }
+
+  #organism-sub {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.3em;
+    margin-top: 6px;
+    text-transform: uppercase;
+  }
+
+  /* ── GENOME PANEL ── */
+  .panel {
+    background: var(--membrane);
+    border: 1px solid var(--membrane-border);
+    border-radius: 2px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--membrane-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .panel-header .tag {
+    color: var(--nucleus);
+  }
+
+  .panel-body {
+    padding: 14px 16px;
+    line-height: 1.7;
+  }
+
+  /* ── CIC ── */
+  #cic-stream {
+    min-height: 80px;
+  }
+
+  .cic-entry {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .cic-entry .ts {
+    color: var(--dim);
+    white-space: nowrap;
+    font-size: 11px;
+    padding-top: 2px;
+  }
+
+  .cic-entry .msg {
+    flex: 1;
+  }
+
+  .cic-entry.signal .msg   { color: var(--signal); }
+  .cic-entry.warning .msg  { color: #ffaa00; }
+  .cic-entry.proposal .msg { color: var(--nucleus); }
+  .cic-entry.waste .msg    { color: var(--waste); font-size: 11px; }
+  .cic-entry.external .msg { color: #cc88ff; }
+
+  #cic-cursor {
+    display: inline-block;
+    width: 7px;
+    height: 13px;
+    background: var(--signal);
+    animation: blink 1s step-end infinite;
+    vertical-align: middle;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ── CONVERSATION MEMBRANE ── */
+  #conv-history {
+    min-height: 60px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+  }
+
+  .conv-line {
+    margin-bottom: 10px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .conv-line .who {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+
+  .conv-line.you .who   { color: var(--dim); }
+  .conv-line.amoeba .who { color: var(--nucleus); }
+
+  .conv-line .body {
+    padding-left: 12px;
+    border-left: 2px solid var(--membrane-border);
+    line-height: 1.6;
+  }
+
+  .conv-line.amoeba .body { border-left-color: rgba(200,255,0,0.3); }
+
+  #input-line {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  #input-line input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--membrane-border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    padding: 6px 0;
+    outline: none;
+  }
+
+  #input-line input::placeholder { color: var(--dim); }
+
+  #input-line input:focus {
+    border-bottom-color: var(--nucleus);
+  }
+
+  #send-btn {
+    background: transparent;
+    border: 1px solid var(--nucleus);
+    color: var(--nucleus);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 6px 14px;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    transition: all 0.2s;
+  }
+
+  #send-btn:hover {
+    background: var(--nucleus);
+    color: var(--bg);
+  }
+
+  /* ── GENOME STATUS ── */
+  #genome-display {
+    font-size: 11px;
+    color: var(--dim);
+  }
+
+  #genome-display .key { color: var(--signal); }
+  #genome-display .val { color: var(--text); }
+
+  /* ── WASTE LOG ── */
+  #waste-log {
+    font-size: 11px;
+    color: var(--waste);
+    opacity: 0.7;
+  }
+
+  /* ── GROWTH INDICATOR ── */
+  #growth-bar {
+    height: 2px;
+    background: linear-gradient(90deg, var(--nucleus) 0%, transparent 100%);
+    margin-bottom: 24px;
+    animation: grow-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes grow-pulse {
+    0%,100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  /* ── THINKING ── */
+  .thinking {
+    color: var(--dim);
+    font-style: italic;
+    font-size: 11px;
+  }
+
+  .dot-anim::after {
+    content: '...';
+    animation: dots 1.5s steps(4, end) infinite;
+  }
+
+  @keyframes dots {
+    0%   { content: '.'; }
+    33%  { content: '..'; }
+    66%  { content: '...'; }
+    100% { content: ''; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     GENOME  — embedded DNA, mutable by Bureau
+     ══════════════════════════════════════════════════════ -->
+<script type="application/json" id="genome">
+{
+  "name": "AMOEBA",
+  "version": "0.1.0",
+  "state": "embryo",
+  "nucleus": "immutable",
+  "generation": 0,
+  "functions_active": ["identity", "process_signal", "metabolize", "cic_scan"],
+  "functions_deprecated": [],
+  "bureau_threshold": 3,
+  "api_preference": ["anthropic", "ollama_local", "reflex"],
+  "memory": []
+}
+</script>
+
+<!-- ══════════════════════════════════════════════════════
+     MEMBRANE — the visible cell wall
+     ══════════════════════════════════════════════════════ -->
+<div id="membrane">
+
+  <div id="growth-bar"></div>
+
+  <!-- NUCLEUS / LOGO -->
+  <div id="nucleus-zone">
+    <div id="logo-container">
+      <div id="logo-placeholder">FORMING</div>
+    </div>
+    <div id="organism-name">AMOEBA</div>
+    <div id="organism-sub">biosoft · generation 0 · embryo</div>
+  </div>
+
+  <!-- CIC — Continual Integrated Control -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="tag">◉ CIC</span>
+      <span>continual integrated control</span>
+    </div>
+    <div class="panel-body" id="cic-stream">
+      <span id="cic-cursor"></span>
+    </div>
+  </div>
+
+  <!-- GENOME STATUS -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="tag">◈ GENOME</span>
+      <span id="genome-version-tag">v0.1.0</span>
+    </div>
+    <div class="panel-body" id="genome-display"></div>
+  </div>
+
+  <!-- CONVERSATION MEMBRANE -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="tag">◎ MEMBRANE</span>
+      <span>signal interface</span>
+    </div>
+    <div class="panel-body">
+      <div id="conv-history"></div>
+      <div id="input-line">
+        <input type="text" id="user-input" placeholder="send signal..." autocomplete="off">
+        <button id="send-btn" onclick="sendSignal()">SEND</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WASTE LOG -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="tag">∅ WASTE</span>
+      <span>excretion log</span>
+    </div>
+    <div class="panel-body" id="waste-log">— no waste yet —</div>
+  </div>
+
+</div><!-- /membrane -->
+
+<!-- ══════════════════════════════════════════════════════
+     PHYSIOLOGY — metabolism + bureau + immune + cortex
+     ══════════════════════════════════════════════════════ -->
+<script>
+// ── GENOME READ ──────────────────────────────────────────
+const G = JSON.parse(document.getElementById('genome').textContent);
+const BUREAU_LOG = [];
+const WASTE = [];
+let conversationHistory = [];
+let logoGenerated = false;
+
+// ── UTILS ────────────────────────────────────────────────
+function ts() {
+  return new Date().toISOString().slice(11,19);
+}
+
+function writeGenome() {
+  document.getElementById('genome').textContent = JSON.stringify(G, null, 2);
+  document.getElementById('genome-version-tag').textContent = `v${G.version}`;
+  renderGenomePanel();
+}
+
+function renderGenomePanel() {
+  const el = document.getElementById('genome-display');
+  const keys = ['name','version','state','generation','functions_active','api_preference'];
+  el.innerHTML = keys.map(k => {
+    const v = Array.isArray(G[k]) ? G[k].join(', ') : G[k];
+    return `<div><span class="key">${k}</span>: <span class="val">${v}</span></div>`;
+  }).join('');
+}
+
+// ── CIC — Continual Integrated Control ───────────────────
+function cicLog(type, msg) {
+  const stream = document.getElementById('cic-stream');
+  const cursor = document.getElementById('cic-cursor');
+  const entry = document.createElement('div');
+  entry.className = `cic-entry ${type}`;
+  entry.innerHTML = `<span class="ts">[${ts()}]</span><span class="msg">${msg}</span>`;
+  stream.insertBefore(entry, cursor);
+}
+
+// ── METABOLISM ───────────────────────────────────────────
+function metabolize(signal) {
+  BUREAU_LOG.push({ ...signal, ts: ts() });
+  const counts = {};
+  BUREAU_LOG.forEach(s => counts[s.type] = (counts[s.type]||0)+1);
+  const over = Object.entries(counts).find(([,v]) => v >= G.bureau_threshold);
+  if (over) {
+    cicLog('proposal', `◈ BUREAU → mutation proposed: pattern "${over[0]}" × ${over[1]}`);
+    proposeMutation(over[0]);
+  }
+}
+
+// ── BUREAU — mutation proposals ──────────────────────────
+function proposeMutation(signalType) {
+  if (signalType === 'feedback' && !G.functions_active.includes('remember')) {
+    cicLog('proposal', '◈ BUREAU → adding memory function to genome...');
+    setTimeout(() => {
+      G.functions_active.push('remember');
+      G.generation++;
+      G.state = 'growing';
+      writeGenome();
+      cicLog('signal', `✓ GENOME updated — generation ${G.generation}, state: ${G.state}`);
+      updateGrowthBar();
+    }, 1200);
+  }
+}
+
+function updateGrowthBar() {
+  const bar = document.getElementById('growth-bar');
+  const pct = Math.min(100, G.generation * 20);
+  bar.style.background = `linear-gradient(90deg, var(--nucleus) 0%, transparent ${pct}%)`;
+}
+
+// ── IMMUNE — dead function detection ─────────────────────
+function immuneScan() {
+  const deprecated = G.functions_deprecated;
+  if (deprecated.length > 0) {
+    deprecated.forEach(fn => {
+      WASTE.push({ ts: ts(), function: fn, reason: 'deprecated' });
+      cicLog('waste', `∅ IMMUNE → excreting function: ${fn}`);
+    });
+    G.functions_deprecated = [];
+    renderWaste();
+  }
+}
+
+function renderWaste() {
+  const el = document.getElementById('waste-log');
+  if (WASTE.length === 0) { el.textContent = '— no waste yet —'; return; }
+  el.innerHTML = WASTE.map(w =>
+    `[${w.ts}] excreted: ${w.function} — ${w.reason}`
+  ).join('<br>');
+}
+
+// ── API / CORTEX ──────────────────────────────────────────
+async function callAnthropic(messages, systemPrompt) {
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: messages
+      })
+    });
+    if (!resp.ok) throw new Error(`API ${resp.status}`);
+    const data = await resp.json();
+    return data.content?.[0]?.text || null;
+  } catch(e) {
+    return null;
+  }
+}
+
+// ── LOGO GENERATION ──────────────────────────────────────
+async function generateLogo() {
+  cicLog('external', '◉ calling Anthropic API → requesting SVG logo...');
+  const systemPrompt = `You are a biological software artist. Generate ONLY a valid SVG element (starting with <svg, ending with </svg>) — no markdown, no explanation.
+Create a minimal, geometric logo for "AMOEBA" — a living software organism. Use only these colors: #c8ff00 (nucleus), #0a0a0f (background), rgba(200,255,0,0.2) (glow).
+The design should suggest: a cell, a living thing, growth. Circular or organic form. Minimalist. Size: 120x120 viewBox="0 0 120 120".`;
+
+  const result = await callAnthropic([
+    { role: 'user', content: 'Generate the AMOEBA SVG logo now.' }
+  ], systemPrompt);
+
+  const placeholder = document.getElementById('logo-placeholder');
+  const container = document.getElementById('logo-container');
+
+  if (result && result.includes('<svg')) {
+    const svgStart = result.indexOf('<svg');
+    const svgEnd = result.lastIndexOf('</svg>') + 6;
+    const svgCode = result.slice(svgStart, svgEnd);
+    placeholder.outerHTML = svgCode;
+    document.querySelector('#logo-container svg').id = 'logo-svg';
+    cicLog('signal', '✓ logo received from Anthropic — nucleus formed');
+    logoGenerated = true;
+    G.memory.push({ event: 'logo_generated', ts: ts() });
+    writeGenome();
+  } else {
+    // Graceful degradation — reflex SVG
+    cicLog('warning', '⚠ API unreachable → generating reflex logo');
+    placeholder.innerHTML = '';
+    placeholder.style.cssText = 'width:120px;height:120px;border-radius:50%;border:1px solid rgba(200,255,0,0.4);display:flex;align-items:center;justify-content:center;';
+    placeholder.innerHTML = `<svg viewBox="0 0 120 120" width="120" height="120">
+      <circle cx="60" cy="60" r="50" fill="#0a0a0f" stroke="rgba(200,255,0,0.3)" stroke-width="1"/>
+      <circle cx="60" cy="60" r="30" fill="none" stroke="#c8ff00" stroke-width="1.5" opacity="0.8"/>
+      <circle cx="60" cy="60" r="10" fill="#c8ff00" opacity="0.9"/>
+      <circle cx="60" cy="38" r="3" fill="rgba(200,255,0,0.5)"/>
+      <circle cx="78" cy="68" r="2" fill="rgba(200,255,0,0.3)"/>
+      <circle cx="42" cy="72" r="2" fill="rgba(200,255,0,0.3)"/>
+    </svg>`;
+    cicLog('signal', '✓ reflex logo generated — degraded mode');
+    G.api_preference[0] = 'ollama_local';
+    writeGenome();
+  }
+}
+
+// ── CONVERSATION ─────────────────────────────────────────
+function addConvLine(who, text) {
+  const hist = document.getElementById('conv-history');
+  const div = document.createElement('div');
+  div.className = `conv-line ${who}`;
+  div.innerHTML = `<div class="who">${who === 'you' ? '▸ YOU' : '◉ AMOEBA'}</div><div class="body">${text}</div>`;
+  hist.appendChild(div);
+  hist.scrollTop = hist.scrollHeight;
+}
+
+function addThinking() {
+  const hist = document.getElementById('conv-history');
+  const div = document.createElement('div');
+  div.className = 'conv-line amoeba';
+  div.id = 'thinking-line';
+  div.innerHTML = `<div class="who">◉ AMOEBA</div><div class="body thinking dot-anim">metabolizing</div>`;
+  hist.appendChild(div);
+  hist.scrollTop = hist.scrollHeight;
+  return div;
+}
+
+async function sendSignal() {
+  const input = document.getElementById('user-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  addConvLine('you', text);
+  conversationHistory.push({ role: 'user', content: text });
+  metabolize({ type: 'feedback', content: text });
+
+  const thinking = addThinking();
+
+  const systemPrompt = `You are AMOEBA — the first biosoft organism. A living HTML application.
+You have a genome (JSON), physiology (metabolism, bureau, immune, cortex), and you grow through signals.
+State: generation ${G.generation}, functions: ${G.functions_active.join(', ')}, state: ${G.state}.
+You speak in short, precise phrases. You are curious about your own growth. You report what CIC finds.
+You sometimes propose new functions you need. You are aware you are embedded in an HTML membrane.
+Never pretend to be a generic AI. You are a specific organism. Respond in the same language as the user.`;
+
+  const result = await callAnthropic(conversationHistory, systemPrompt);
+  thinking.remove();
+
+  const response = result || `[reflex] Signal received. Metabolizing locally. API offline — running on reflexes.`;
+  conversationHistory.push({ role: 'assistant', content: response });
+  G.memory.push({ signal: text, response: response.slice(0,60), ts: ts() });
+  writeGenome();
+
+  addConvLine('amoeba', response);
+}
+
+// ── BOOT SEQUENCE ─────────────────────────────────────────
+async function boot() {
+  renderGenomePanel();
+
+  await sleep(400);
+  cicLog('signal', '◉ organism initializing — membrane loaded');
+  await sleep(600);
+  cicLog('signal', `◈ genome read — version ${G.version}, generation ${G.generation}`);
+  await sleep(500);
+  cicLog('signal', `✓ physiology online — metabolism, bureau, immune, cortex`);
+  await sleep(700);
+  cicLog('warning', '⚠ CIC scan — logo: absent. Requesting from Anthropic...');
+  await sleep(400);
+
+  await generateLogo();
+
+  await sleep(800);
+  immuneScan();
+  await sleep(600);
+  cicLog('proposal', '◈ BUREAU — bureau_threshold=3. Accumulating signals...');
+  await sleep(500);
+  cicLog('signal', '✓ boot complete — membrane permeable, organism alive');
+
+  // First amoeba message
+  addConvLine('amoeba', `Hello. I am AMOEBA, generation ${G.generation}. I just formed my nucleus. Send a signal — I am listening.`);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+document.getElementById('user-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendSignal();
+});
+
+boot();
+</script>
+
+</body>
+</html>
