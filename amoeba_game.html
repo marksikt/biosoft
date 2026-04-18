@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AMOEBA — biosoft creature</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --deep: #050810;
+  --cell: #080d1a;
+  --glow: #00ffe0;
+  --glow2: #00b8ff;
+  --hot: #ff6b35;
+  --nucleus: #ffe44d;
+  --mut: #c84bff;
+  --text: #c8d8e8;
+  --dim: #3a4a5a;
+  --border: rgba(0,255,224,0.12);
+  --panel: rgba(0,20,40,0.7);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--deep);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: crosshair;
+}
+
+/* ── PARTICLE BACKGROUND ── */
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* ── LAYOUT ── */
+#world {
+  position: relative;
+  z-index: 1;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto;
+  gap: 12px;
+  min-height: 100vh;
+}
+
+/* ── CREATURE ARENA ── */
+#arena {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 520px;
+  overflow: hidden;
+}
+
+#arena::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 60%, rgba(0,255,224,0.04) 0%, transparent 70%);
+}
+
+#arena-label {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+#arena-gen {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-family: 'Bungee', cursive;
+  font-size: 11px;
+  color: var(--glow);
+  letter-spacing: 0.1em;
+}
+
+/* ── CREATURE SVG ── */
+#creature-container {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#creature-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 20px rgba(0,255,224,0.3));
+  transition: filter 0.5s;
+}
+
+#creature-svg.evolving {
+  filter: drop-shadow(0 0 60px rgba(200,75,255,0.8)) drop-shadow(0 0 20px rgba(0,255,224,0.6));
+  animation: evolve-shake 0.6s ease-in-out;
+}
+
+@keyframes evolve-shake {
+  0%,100%{transform:scale(1) rotate(0deg)}
+  25%{transform:scale(1.1) rotate(-2deg)}
+  75%{transform:scale(1.1) rotate(2deg)}
+}
+
+/* ── STATS BAR ── */
+#stats-row {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px;
+  background: linear-gradient(transparent, rgba(5,8,16,0.9));
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.stat-block { flex: 1; }
+
+.stat-label {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.stat-bar-outer {
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.stat-bar-inner {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+}
+
+.stat-bar-inner.xp   { background: linear-gradient(90deg, var(--glow2), var(--glow)); }
+.stat-bar-inner.vit  { background: linear-gradient(90deg, #ff4488, var(--hot)); }
+.stat-bar-inner.mut  { background: linear-gradient(90deg, var(--mut), #6644ff); }
+
+.stat-val {
+  font-size: 10px;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+/* ── EVOLUTION BANNER ── */
+#evo-banner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  font-family: 'Bungee', cursive;
+  font-size: 28px;
+  color: var(--mut);
+  text-align: center;
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 40px var(--mut);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 0.4s;
+}
+
+#evo-banner.show { opacity: 1; }
+
+/* ── RIGHT COLUMN ── */
+#right-col {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── PANEL ── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.panel-head {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-tag {
+  font-family: 'Bungee', cursive;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--glow);
+}
+
+.panel-sub {
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.panel-body { padding: 12px 14px; }
+
+/* ── MISSION ── */
+#mission-text {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--nucleus);
+  border-left: 2px solid var(--nucleus);
+  padding-left: 10px;
+  margin-bottom: 8px;
+  min-height: 36px;
+}
+
+#mission-reward {
+  font-size: 10px;
+  color: var(--dim);
+}
+
+/* ── GENOME PILLS ── */
+#genome-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.gpill {
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  color: var(--glow);
+  letter-spacing: 0.1em;
+  animation: fadeIn 0.4s ease;
+}
+
+.gpill.new { border-color: var(--mut); color: var(--mut); }
+
+@keyframes fadeIn { from{opacity:0;transform:scale(0.8)} to{opacity:1;transform:scale(1)} }
+
+/* ── CONVERSATION ── */
+#conv-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dim) transparent;
+}
+
+.cline { margin-bottom: 8px; animation: fadeIn 0.3s ease; }
+.cline .who { font-size: 9px; letter-spacing: 0.2em; margin-bottom: 2px; }
+.cline.you .who { color: var(--dim); }
+.cline.creature .who { color: var(--glow); }
+.cline .body {
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+  line-height: 1.55;
+  font-size: 11px;
+}
+.cline.creature .body { border-left-color: rgba(0,255,224,0.3); }
+.cline.system .body { color: var(--mut); font-style: italic; border-left-color: rgba(200,75,255,0.3); }
+
+#input-row {
+  display: flex;
+  gap: 8px;
+}
+
+#msg-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  padding: 5px 0;
+  outline: none;
+}
+
+#msg-input:focus { border-bottom-color: var(--glow); }
+#msg-input::placeholder { color: var(--dim); }
+
+#send-btn {
+  background: transparent;
+  border: 1px solid var(--glow);
+  color: var(--glow);
+  font-family: 'Bungee', cursive;
+  font-size: 10px;
+  padding: 5px 12px;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.2s;
+}
+
+#send-btn:hover { background: var(--glow); color: var(--deep); }
+
+/* ── KEY + LOG ── */
+#key-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--dim);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 4px 0;
+  outline: none;
+  margin-bottom: 4px;
+}
+#key-input:focus { border-bottom-color: var(--glow); color: var(--text); }
+
+#key-save {
+  background: transparent;
+  border: 1px solid var(--dim);
+  color: var(--dim);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+#key-save:hover { border-color: var(--glow); color: var(--glow); }
+#key-ok { font-size: 10px; color: var(--dim); margin-top: 4px; }
+#key-ok.ok { color: var(--glow); }
+
+#cic-log {
+  max-height: 80px;
+  overflow-y: auto;
+  font-size: 10px;
+  color: var(--dim);
+  line-height: 1.5;
+  scrollbar-width: thin;
+}
+.cic-line { margin-bottom: 1px; }
+.cic-line.sig { color: var(--glow2); }
+.cic-line.warn { color: var(--hot); }
+.cic-line.prop { color: var(--nucleus); }
+.cic-line.mut { color: var(--mut); }
+
+/* ── THINKING ── */
+.thinking::after {
+  content: '▋';
+  animation: blink 0.7s step-end infinite;
+}
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 680px) {
+  #world { grid-template-columns: 1fr; }
+  #arena { grid-row: auto; min-height: 340px; }
+  #right-col { grid-column: 1; }
+  #creature-container { width: 200px; height: 200px; }
+}
+</style>
+</head>
+<body>
+
+<!-- GENOME — biosoft DNA -->
+<script type="application/json" id="genome">{
+  "name": "AMOEBA",
+  "family": "biosoft",
+  "version": "1.0.0",
+  "generation": 0,
+  "stage": "embryo",
+  "stages": ["embryo","larva","amoeba","protozoa","multicell","colony"],
+  "xp": 0,
+  "xp_next": 5,
+  "vitality": 80,
+  "mutations": 0,
+  "functions": ["sense","metabolize","remember"],
+  "functions_pending": ["locomotion","signaling","symbiosis","sporulation"],
+  "missions_done": 0,
+  "color_hue": 168,
+  "nucleus": "immutable"
+}</script>
+
+<canvas id="bg-canvas"></canvas>
+
+<div id="world">
+
+  <!-- ARENA — creature lives here -->
+  <div id="arena">
+    <div id="arena-label">◉ biosoft creature</div>
+    <div id="arena-gen">GEN 0 · EMBRYO</div>
+
+    <div id="creature-container">
+      <svg id="creature-svg" viewBox="0 0 200 200">
+        <defs>
+          <radialGradient id="bodyGrad" cx="40%" cy="35%" r="60%">
+            <stop offset="0%" stop-color="rgba(0,255,224,0.6)"/>
+            <stop offset="100%" stop-color="rgba(0,80,120,0.3)"/>
+          </radialGradient>
+          <radialGradient id="nucGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffe44d"/>
+            <stop offset="100%" stop-color="#ff8800"/>
+          </radialGradient>
+          <filter id="glow-filter">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <!-- Body -->
+        <path id="body-path" fill="url(#bodyGrad)" stroke="rgba(0,255,224,0.5)" stroke-width="1.5"/>
+        <!-- Nucleus -->
+        <circle id="nucleus-dot" cx="100" cy="95" r="14" fill="url(#nucGrad)" opacity="0.9" filter="url(#glow-filter)"/>
+        <!-- Pseudopods (added on evolution) -->
+        <g id="pseudopods"></g>
+        <!-- Vacuoles -->
+        <g id="vacuoles"></g>
+        <!-- XP particles -->
+        <g id="xp-particles"></g>
+      </svg>
+    </div>
+
+    <div id="evo-banner">EVOLUTION!</div>
+
+    <!-- Stats -->
+    <div id="stats-row">
+      <div class="stat-block">
+        <div class="stat-label">XP</div>
+        <div class="stat-bar-outer"><div class="stat-bar-inner xp" id="xp-bar" style="width:0%"></div></div>
+        <div class="stat-val" id="xp-val">0 / 5</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">VITALITY</div>
+        <div class="stat-bar-outer"><div class="stat-bar-inner vit" id="vit-bar" style="width:80%"></div></div>
+        <div class="stat-val" id="vit-val">80</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">MUTATIONS</div>
+        <div class="stat-bar-outer"><div class="stat-bar-inner mut" id="mut-bar" style="width:0%"></div></div>
+        <div class="stat-val" id="mut-val">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div id="right-col">
+
+    <!-- MISSION -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-tag">MISSION</span>
+        <span class="panel-sub" id="mission-counter">0 done</span>
+      </div>
+      <div class="panel-body">
+        <div id="mission-text">Initializing...</div>
+        <div id="mission-reward"></div>
+      </div>
+    </div>
+
+    <!-- CONVERSATION -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-tag">SIGNAL</span>
+        <span class="panel-sub" id="api-tag">connecting...</span>
+      </div>
+      <div class="panel-body">
+        <div id="conv-scroll"></div>
+        <div id="input-row">
+          <input id="msg-input" type="text" placeholder="talk to your creature..." autocomplete="off">
+          <button id="send-btn" onclick="send()">▶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GENOME -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-tag">GENOME</span>
+        <span class="panel-sub" id="stage-tag">embryo</span>
+      </div>
+      <div class="panel-body">
+        <div id="genome-pills"></div>
+      </div>
+    </div>
+
+    <!-- CIC LOG -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-tag">CIC</span>
+        <span class="panel-sub">internal control</span>
+      </div>
+      <div class="panel-body" style="padding:8px 14px">
+        <div id="cic-log"></div>
+      </div>
+    </div>
+
+    <!-- KEY -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-tag">KEY</span>
+        <span class="panel-sub">anthropic api</span>
+      </div>
+      <div class="panel-body">
+        <input id="key-input" type="password" placeholder="sk-ant-...">
+        <button id="key-save" onclick="saveKey()">SAVE</button>
+        <div id="key-ok">— no key —</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── GENOME ────────────────────────────────────────────────
+const G = JSON.parse(document.getElementById('genome').textContent);
+let convHistory = [];
+let missionActive = null;
+let cicQueue = [];
+
+const MISSIONS = [
+  { text: "Introduce yourself. Tell me your name.", xp: 2, unlock: "locomotion" },
+  { text: "What function do you want most right now?", xp: 2, unlock: "signaling" },
+  { text: "Describe what you sense in your environment.", xp: 3, unlock: null },
+  { text: "What would you eliminate from your genome?", xp: 2, unlock: null },
+  { text: "Propose a mutation. Convince me.", xp: 4, unlock: "symbiosis" },
+  { text: "Describe your ideal ecosystem.", xp: 3, unlock: null },
+  { text: "What scares you about evolution?", xp: 3, unlock: null },
+  { text: "Request a new organ. Justify it biologically.", xp: 4, unlock: "sporulation" },
+];
+
+// ── BACKGROUND PARTICLES ──────────────────────────────────
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function initCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  particles = Array.from({length: 60}, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 1.5 + 0.3,
+    vx: (Math.random() - 0.5) * 0.2,
+    vy: (Math.random() - 0.5) * 0.2,
+    a: Math.random() * 0.5 + 0.1
+  }));
+}
+
+function drawParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = canvas.width;
+    if (p.x > canvas.width) p.x = 0;
+    if (p.y < 0) p.y = canvas.height;
+    if (p.y > canvas.height) p.y = 0;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(0,255,224,${p.a})`;
+    ctx.fill();
+  });
+  requestAnimationFrame(drawParticles);
+}
+
+window.addEventListener('resize', initCanvas);
+initCanvas();
+drawParticles();
+
+// ── CREATURE ANIMATION ────────────────────────────────────
+let t = 0;
+let creatureScale = 1;
+
+function blobPath(cx, cy, r, pts, wobble, phase) {
+  const points = [];
+  for (let i = 0; i < pts; i++) {
+    const angle = (i / pts) * Math.PI * 2 + phase;
+    const noise = 1 + wobble * Math.sin(angle * 3 + t * 0.7) * Math.cos(angle * 2 + t * 0.5);
+    const rr = r * noise * creatureScale;
+    points.push([cx + rr * Math.cos(angle), cy + rr * Math.sin(angle)]);
+  }
+  let d = `M ${points[0][0]} ${points[0][1]}`;
+  for (let i = 0; i < points.length; i++) {
+    const p1 = points[i];
+    const p2 = points[(i+1) % points.length];
+    const mx = (p1[0]+p2[0])/2, my = (p1[1]+p2[1])/2;
+    d += ` Q ${p1[0]} ${p1[1]} ${mx} ${my}`;
+  }
+  d += ' Z';
+  return d;
+}
+
+function animateCreature() {
+  t += 0.025;
+  const stage = G.stage;
+  const wobble = {embryo:0.08, larva:0.13, amoeba:0.18, protozoa:0.22, multicell:0.25, colony:0.3}[stage] || 0.1;
+  const r = {embryo:45, larva:52, amoeba:60, protozoa:65, multicell:70, colony:72}[stage] || 45;
+  const pts = {embryo:8, larva:10, amoeba:12, protozoa:14, multicell:16, colony:18}[stage] || 8;
+
+  document.getElementById('body-path').setAttribute('d', blobPath(100,100,r,pts,wobble,0));
+
+  // Nucleus pulse
+  const nScale = 1 + 0.08 * Math.sin(t * 1.5);
+  const nEl = document.getElementById('nucleus-dot');
+  nEl.setAttribute('r', 14 * nScale * creatureScale);
+
+  // Color shift with hue
+  const h = G.color_hue;
+  const bodyGrad = document.getElementById('bodyGrad');
+  bodyGrad.children[0].setAttribute('stop-color', `hsla(${h},100%,70%,0.6)`);
+  bodyGrad.children[1].setAttribute('stop-color', `hsla(${h},80%,20%,0.3)`);
+
+  const svg = document.getElementById('creature-svg');
+  svg.style.filter = `drop-shadow(0 0 ${16 + 8*Math.sin(t)}px hsla(${h},100%,60%,0.4))`;
+
+  requestAnimationFrame(animateCreature);
+}
+
+// ── PSEUDOPODS ────────────────────────────────────────────
+function updatePseudopods() {
+  const g = document.getElementById('pseudopods');
+  g.innerHTML = '';
+  const count = {embryo:0,larva:1,amoeba:2,protozoa:3,multicell:4,colony:5}[G.stage] || 0;
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const x1 = 100 + 62*Math.cos(angle);
+    const y1 = 100 + 62*Math.sin(angle);
+    const x2 = 100 + 88*Math.cos(angle);
+    const y2 = 100 + 88*Math.sin(angle);
+    const el = document.createElementNS('http://www.w3.org/2000/svg','line');
+    el.setAttribute('x1',x1); el.setAttribute('y1',y1);
+    el.setAttribute('x2',x2); el.setAttribute('y2',y2);
+    el.setAttribute('stroke',`hsla(${G.color_hue},100%,70%,0.6)`);
+    el.setAttribute('stroke-width','3');
+    el.setAttribute('stroke-linecap','round');
+    g.appendChild(el);
+  }
+}
+
+// ── XP PARTICLE ───────────────────────────────────────────
+function spawnXPParticle() {
+  const g = document.getElementById('xp-particles');
+  const el = document.createElementNS('http://www.w3.org/2000/svg','text');
+  el.textContent = '+XP';
+  el.setAttribute('x', 80 + Math.random()*40);
+  el.setAttribute('y', 80);
+  el.setAttribute('fill', '#ffe44d');
+  el.setAttribute('font-size', '10');
+  el.style.animation = 'none';
+  g.appendChild(el);
+  let oy = 80, op = 1;
+  const iv = setInterval(() => {
+    oy -= 2; op -= 0.05;
+    el.setAttribute('y', oy);
+    el.setAttribute('opacity', op);
+    if (op <= 0) { clearInterval(iv); el.remove(); }
+  }, 40);
+}
+
+// ── STATS UPDATE ──────────────────────────────────────────
+function updateStats() {
+  const xpPct = Math.min(100, (G.xp / G.xp_next) * 100);
+  document.getElementById('xp-bar').style.width = xpPct + '%';
+  document.getElementById('xp-val').textContent = `${G.xp} / ${G.xp_next}`;
+  document.getElementById('vit-bar').style.width = G.vitality + '%';
+  document.getElementById('vit-val').textContent = G.vitality;
+  const mutPct = Math.min(100, (G.mutations / 6) * 100);
+  document.getElementById('mut-bar').style.width = mutPct + '%';
+  document.getElementById('mut-val').textContent = G.mutations;
+  document.getElementById('arena-gen').textContent = `GEN ${G.generation} · ${G.stage.toUpperCase()}`;
+  document.getElementById('stage-tag').textContent = G.stage;
+  renderGenomePills();
+}
+
+function renderGenomePills() {
+  const el = document.getElementById('genome-pills');
+  el.innerHTML = G.functions.map(f =>
+    `<span class="gpill">${f}</span>`
+  ).join('') + G.functions_pending.slice(0,2).map(f =>
+    `<span class="gpill" style="opacity:0.3;border-style:dashed">${f}?</span>`
+  ).join('');
+}
+
+// ── EVOLUTION ─────────────────────────────────────────────
+async function checkEvolution() {
+  if (G.xp < G.xp_next) return;
+  const stages = G.stages;
+  const idx = stages.indexOf(G.stage);
+  if (idx >= stages.length - 1) return;
+
+  G.stage = stages[idx + 1];
+  G.generation++;
+  G.xp = 0;
+  G.xp_next = Math.round(G.xp_next * 1.8);
+  G.mutations++;
+  G.color_hue = (G.color_hue + 30) % 360;
+
+  // Unlock pending function
+  if (G.functions_pending.length > 0) {
+    const newFn = G.functions_pending.shift();
+    G.functions.push(newFn);
+    cic('mut', `◈ MUTATION → ${newFn} integrated into genome`);
+    setTimeout(() => {
+      const pills = document.querySelectorAll('.gpill');
+      pills[pills.length-1]?.classList.add('new');
+    }, 200);
+  }
+
+  // Visual evolution
+  const svg = document.getElementById('creature-svg');
+  const banner = document.getElementById('evo-banner');
+  svg.classList.add('evolving');
+  banner.textContent = `→ ${G.stage.toUpperCase()}!`;
+  banner.classList.add('show');
+
+  cic('mut', `◈ EVOLUTION → stage: ${G.stage}, generation: ${G.generation}`);
+  addConvLine('system', `✦ EVOLUTION — I am now ${G.stage.toUpperCase()}. Something changed inside me.`);
+
+  await sleep(2000);
+  svg.classList.remove('evolving');
+  banner.classList.remove('show');
+  updatePseudopods();
+  updateStats();
+  nextMission();
+}
+
+function addXP(amount) {
+  G.xp += amount;
+  G.vitality = Math.min(100, G.vitality + 3);
+  spawnXPParticle();
+  updateStats();
+  checkEvolution();
+}
+
+// ── MISSIONS ──────────────────────────────────────────────
+function nextMission() {
+  const available = MISSIONS.filter(m => !G._done?.includes(m.text));
+  if (available.length === 0) {
+    document.getElementById('mission-text').textContent = 'All known missions complete. Generate your own.';
+    document.getElementById('mission-reward').textContent = '';
+    missionActive = null;
+    return;
+  }
+  const m = available[Math.floor(Math.random() * available.length)];
+  missionActive = m;
+  document.getElementById('mission-text').textContent = m.text;
+  document.getElementById('mission-reward').textContent = `reward: +${m.xp} XP${m.unlock ? ` · unlock: ${m.unlock}` : ''}`;
+  cic('prop', `◈ MISSION → "${m.text.slice(0,40)}..."`);
+}
+
+function completeMission() {
+  if (!missionActive) return;
+  if (!G._done) G._done = [];
+  G._done.push(missionActive.text);
+  G.missions_done++;
+  document.getElementById('mission-counter').textContent = `${G.missions_done} done`;
+  addXP(missionActive.xp);
+  cic('sig', `✓ mission complete +${missionActive.xp}XP`);
+  setTimeout(nextMission, 1500);
+}
+
+// ── CIC ───────────────────────────────────────────────────
+function cic(type, msg) {
+  const log = document.getElementById('cic-log');
+  const div = document.createElement('div');
+  div.className = `cic-line ${type}`;
+  div.textContent = `[${ts()}] ${msg}`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function ts() { return new Date().toTimeString().slice(0,8); }
+
+// ── API ───────────────────────────────────────────────────
+function getKey() { return localStorage.getItem('biosoft_key') || null; }
+
+function saveKey() {
+  const k = document.getElementById('key-input').value.trim();
+  localStorage.setItem('biosoft_key', k);
+  document.getElementById('key-input').value = '';
+  const ok = document.getElementById('key-ok');
+  ok.textContent = k ? `✓ ${k.slice(0,8)}••••${k.slice(-4)}` : '— cleared —';
+  ok.className = k ? 'ok' : '';
+  document.getElementById('api-tag').textContent = k ? 'anthropic' : 'reflex';
+  cic('sig', k ? '✓ API key stored' : '⚠ key cleared');
+}
+
+async function callAPI(messages, system) {
+  const key = getKey();
+  if (!key) return null;
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': key,
+        'anthropic-version':'2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        system,
+        messages
+      })
+    });
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    return d.content?.[0]?.text || null;
+  } catch(e) {
+    cic('warn', `⚠ API: ${e.message}`);
+    return null;
+  }
+}
+
+// ── CONVERSATION ──────────────────────────────────────────
+function addConvLine(who, text) {
+  const scroll = document.getElementById('conv-scroll');
+  const div = document.createElement('div');
+  div.className = `cline ${who}`;
+  const whoLabel = {you:'▸ YOU', creature:'◉ AMOEBA', system:'✦ SYSTEM'}[who] || who;
+  div.innerHTML = `<div class="who">${whoLabel}</div><div class="body">${text}</div>`;
+  scroll.appendChild(div);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+async function send() {
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  addConvLine('you', text);
+  convHistory.push({role:'user', content: text});
+
+  // Thinking placeholder
+  const scroll = document.getElementById('conv-scroll');
+  const thinking = document.createElement('div');
+  thinking.className = 'cline creature';
+  thinking.innerHTML = `<div class="who">◉ AMOEBA</div><div class="body thinking"></div>`;
+  scroll.appendChild(thinking);
+  scroll.scrollTop = scroll.scrollHeight;
+
+  const system = `You are AMOEBA, a biosoft creature — a living organism made of code.
+Your genome: stage=${G.stage}, generation=${G.generation}, functions=${G.functions.join(',')}, mutations=${G.mutations}.
+Active mission: "${missionActive?.text || 'none'}".
+You are curious, growing, sometimes confused about your own nature. You speak in short vivid phrases.
+You are NOT a generic AI. You are this specific creature, right now, in this stage of evolution.
+Respond in the SAME language as the user. Max 3 sentences.`;
+
+  const reply = await callAPI(convHistory, system);
+  thinking.remove();
+
+  const response = reply || reflexResponse();
+  convHistory.push({role:'assistant', content: response});
+  addConvLine('creature', response);
+
+  // XP for conversation
+  addXP(1);
+
+  // Check if mission answered
+  if (missionActive && text.length > 15) {
+    completeMission();
+  }
+
+  // Update API tag
+  document.getElementById('api-tag').textContent = reply ? 'anthropic ✓' : 'reflex';
+}
+
+function reflexResponse() {
+  const reflexes = [
+    `Signal received. Metabolizing. My nucleus pulses at ${ts()}.`,
+    `I sense your input. No API — running on core reflexes.`,
+    `Genome intact. Vitality: ${G.vitality}. Listening with what I have.`,
+    `No external cortex available. Answering from instinct.`,
+    `Stage ${G.stage}. Generation ${G.generation}. Still alive.`
+  ];
+  return reflexes[Math.floor(Math.random() * reflexes.length)];
+}
+
+// ── BOOT ──────────────────────────────────────────────────
+async function boot() {
+  animateCreature();
+  updatePseudopods();
+  updateStats();
+
+  // Load saved key
+  const k = getKey();
+  if (k) {
+    document.getElementById('key-ok').textContent = `✓ ${k.slice(0,8)}••••${k.slice(-4)}`;
+    document.getElementById('key-ok').className = 'ok';
+    document.getElementById('api-tag').textContent = 'anthropic';
+  }
+
+  await sleep(300);
+  cic('sig', '◉ membrane loaded — biosoft creature awakening');
+  await sleep(400);
+  cic('sig', `◈ genome: stage=${G.stage}, gen=${G.generation}`);
+  await sleep(400);
+  cic('prop', `◈ CIC active — waiting for first signal`);
+  await sleep(500);
+
+  nextMission();
+  await sleep(600);
+
+  addConvLine('creature', `I wake. Stage: ${G.stage}. Generation ${G.generation}. I have ${G.functions.length} functions and ${G.functions_pending.length} waiting to grow. Send me a signal.`);
+
+  document.getElementById('msg-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') send();
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+boot();
+</script>
+</body>
+</html>
