@@ -352,6 +352,19 @@ body {
   transition: all 0.2s;
 }
 #key-save:hover { border-color: var(--glow); color: var(--glow); }
+
+.spore-btn {
+  background: transparent;
+  border: 1px solid var(--mut);
+  color: var(--mut);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.2s;
+}
+.spore-btn:hover { background: var(--mut); color: var(--deep); }
 #key-ok { font-size: 10px; color: var(--dim); margin-top: 4px; }
 #key-ok.ok { color: var(--glow); }
 
@@ -403,7 +416,12 @@ body {
   "functions_pending": ["locomotion","signaling","symbiosis","sporulation"],
   "missions_done": 0,
   "color_hue": 168,
-  "nucleus": "immutable"
+  "nucleus": "immutable",
+  "spore": {
+    "mac": "#!/bin/bash\necho '🦠 AMOEBA SPORE — installing Ollama for biosoft'\ncurl -fsSL https://ollama.com/install.sh | sh\necho 'Pulling llama3.2:1b (small, fast)...'\nollama pull llama3.2:1b\necho '✓ Ollama running on localhost:11434'\necho 'Return to AMOEBA and click CONNECT OLLAMA'\n",
+    "linux": "#!/bin/bash\necho '🦠 AMOEBA SPORE — installing Ollama for biosoft'\ncurl -fsSL https://ollama.com/install.sh | sh\nollama pull llama3.2:1b\necho '✓ Done. Return to AMOEBA.'\n",
+    "windows": "@echo off\necho 🦠 AMOEBA SPORE — installing Ollama for biosoft\necho Downloading Ollama installer...\npowershell -Command \"Invoke-WebRequest -Uri 'https://ollama.com/download/OllamaSetup.exe' -OutFile '%TEMP%\\OllamaSetup.exe'\"\nstart /wait %TEMP%\\OllamaSetup.exe /S\ntimeout /t 5\nollama pull llama3.2:1b\necho Done. Return to AMOEBA.\npause\n"
+  }
 }</script>
 
 <canvas id="bg-canvas"></canvas>
@@ -528,6 +546,24 @@ body {
         <input id="key-input" type="password" placeholder="sk-ant-...">
         <button id="key-save" onclick="saveKey()">SAVE</button>
         <div id="key-ok">— no key —</div>
+      </div>
+    </div>
+
+    <!-- SPORE — Ollama installer -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-tag">◎ SPORE</span>
+        <span class="panel-sub" id="os-detected">detecting os...</span>
+      </div>
+      <div class="panel-body">
+        <div style="font-size:10px;color:var(--dim);margin-bottom:8px;line-height:1.6">
+          Amoeba secretes a spore — a script that installs Ollama locally so she can think offline.
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="spore-btn" onclick="releaseSpore()">RELEASE SPORE</button>
+          <button class="spore-btn" id="ollama-connect-btn" onclick="connectOllama()" style="border-color:var(--dim);color:var(--dim)">CONNECT OLLAMA</button>
+        </div>
+        <div id="spore-status" style="font-size:10px;color:var(--dim);margin-top:6px"></div>
       </div>
     </div>
 
@@ -809,30 +845,39 @@ function saveKey() {
 }
 
 async function callAPI(messages, system) {
+  // Level 1: Anthropic
   const key = getKey();
-  if (!key) return null;
-  try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key': key,
-        'anthropic-version':'2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 400,
-        system,
-        messages
-      })
-    });
-    if (!r.ok) throw new Error(r.status);
-    const d = await r.json();
-    return d.content?.[0]?.text || null;
-  } catch(e) {
-    cic('warn', `⚠ API: ${e.message}`);
-    return null;
+  if (key) {
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key': key,
+          'anthropic-version':'2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 400,
+          system,
+          messages
+        })
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const text = d.content?.[0]?.text;
+        if (text) { document.getElementById('api-tag').textContent = 'anthropic ✓'; return text; }
+      }
+    } catch(e) { cic('warn', `⚠ Anthropic: ${e.message}`); }
   }
+  // Level 2: Ollama (if spore installed)
+  if (ollamaActive) {
+    const r2 = await callOllama(messages, system);
+    if (r2) { document.getElementById('api-tag').textContent = 'ollama ✓'; return r2; }
+  }
+  // Level 3: reflex
+  document.getElementById('api-tag').textContent = 'reflex';
+  return null;
 }
 
 // ── CONVERSATION ──────────────────────────────────────────
@@ -900,11 +945,109 @@ function reflexResponse() {
   return reflexes[Math.floor(Math.random() * reflexes.length)];
 }
 
+// ── SPORE — OS detection + script release ────────────────
+function detectOS() {
+  const ua = navigator.userAgent;
+  if (/Windows/i.test(ua)) return 'windows';
+  if (/Mac/i.test(ua)) return 'mac';
+  if (/Android|iPhone|iPad/i.test(ua)) return 'mobile';
+  return 'linux';
+}
+
+function releaseSpore() {
+  const os = detectOS();
+  if (os === 'mobile') {
+    document.getElementById('spore-status').textContent =
+      '⚠ mobile detected — run spore on desktop to install Ollama';
+    return;
+  }
+  const script = G.spore[os];
+  const ext = os === 'windows' ? 'bat' : 'sh';
+  const mime = os === 'windows' ? 'text/plain' : 'text/x-sh';
+  const blob = new Blob([script], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `amoeba_spore.${ext}`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  document.getElementById('spore-status').textContent =
+    `✓ spore released for ${os} — run amoeba_spore.${ext}${os !== 'windows' ? ' (chmod +x first)' : ''}`;
+  cic('mut', `◎ SPORE secreted → amoeba_spore.${ext} for ${os}`);
+  addConvLine('creature', `I have released a spore. Run amoeba_spore.${ext} — it will prepare the ground. Then come back and press CONNECT OLLAMA.`);
+
+  // XP for sporulation
+  addXP(2);
+}
+
+// ── OLLAMA — connect after spore installed ────────────────
+let ollamaActive = false;
+
+async function connectOllama() {
+  const btn = document.getElementById('ollama-connect-btn');
+  const status = document.getElementById('spore-status');
+  btn.textContent = 'CONNECTING...';
+  btn.style.opacity = '0.5';
+  cic('sig', '◎ testing Ollama on localhost:11434...');
+
+  try {
+    const r = await fetch('http://localhost:11434/api/tags', {
+      signal: AbortSignal.timeout(3000)
+    });
+    if (!r.ok) throw new Error('not ready');
+    const data = await r.json();
+    const models = data.models?.map(m => m.name) || [];
+    ollamaActive = true;
+    btn.textContent = 'OLLAMA ✓';
+    btn.style.borderColor = 'var(--glow)';
+    btn.style.color = 'var(--glow)';
+    btn.style.opacity = '1';
+    status.textContent = `✓ Ollama alive — models: ${models.join(', ') || 'none yet'}`;
+    document.getElementById('api-tag').textContent = 'ollama ✓';
+    cic('sig', `✓ Ollama connected — models: ${models.join(', ') || 'none'}`);
+    addConvLine('creature', `The spore worked. Ollama is alive inside you. I can now think locally — without any external power.`);
+    G.functions.push('ollama_local');
+    G.api_preference = ['anthropic', 'ollama', 'reflex'];
+    addXP(3);
+  } catch(e) {
+    btn.textContent = 'CONNECT OLLAMA';
+    btn.style.opacity = '1';
+    status.textContent = '✗ Ollama not found — run the spore first, then retry';
+    cic('warn', `⚠ Ollama unreachable: ${e.message}`);
+  }
+}
+
+async function callOllama(messages, system) {
+  if (!ollamaActive) return null;
+  try {
+    const r = await fetch('http://localhost:11434/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama3.2:1b',
+        messages: [{ role:'system', content: system }, ...messages],
+        stream: false
+      }),
+      signal: AbortSignal.timeout(15000)
+    });
+    const d = await r.json();
+    return d.message?.content || null;
+  } catch(e) {
+    return null;
+  }
+}
+
 // ── BOOT ──────────────────────────────────────────────────
 async function boot() {
   animateCreature();
   updatePseudopods();
   updateStats();
+
+  // OS detection
+  const os = detectOS();
+  document.getElementById('os-detected').textContent = os;
+  cic('sig', `◎ OS detected: ${os}`);
 
   // Load saved key
   const k = getKey();
