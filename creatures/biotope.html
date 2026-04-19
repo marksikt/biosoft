@@ -39,47 +39,65 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .cstatus.dead{color:var(--dim)}
 
 /* ── COLONY ───────────────────────────── */
-#colony{grid-row:1/2;overflow:auto;padding:14px;display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start;background:
+#colony{grid-row:1/2;overflow:auto;padding:12px;display:flex;flex-wrap:wrap;gap:7px;align-content:flex-start;background:
   radial-gradient(ellipse at 20% 80%, rgba(46,204,154,.03) 0%, transparent 50%),
   radial-gradient(ellipse at 80% 20%, rgba(46,100,200,.03) 0%, transparent 50%)}
 
-.aframe{width:280px;height:360px;border-radius:10px;overflow:hidden;position:relative;
-  border:1px solid hsl(var(--chue,150),30%,18%);
+.aframe{width:64px;height:78px;border-radius:6px;overflow:visible;position:relative;
+  border:1px solid hsl(var(--chue,150),28%,16%);
   background:var(--bg2);
-  box-shadow:0 0 24px hsla(var(--chue,150),50%,25%,.1);
-  animation:appear .4s ease;transition:opacity .8s,border-color .5s,box-shadow .5s}
-@keyframes appear{from{opacity:0;transform:scale(.93) translateY(6px)}to{opacity:1;transform:none}}
+  box-shadow:0 0 10px hsla(var(--chue,150),50%,25%,.12);
+  animation:appear .4s ease;transition:opacity .8s,border-color .5s,box-shadow .5s;
+  cursor:default}
+.aframe:hover{border-color:hsl(var(--chue,150),55%,38%);box-shadow:0 0 14px hsla(var(--chue,150),60%,40%,.22);z-index:20}
+@keyframes appear{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:none}}
 
-.aframe.dying{opacity:0;transform:scale(.95);transition:opacity 1.2s,transform 1.2s}
-.aframe.fossil{opacity:.22;border-color:var(--border);box-shadow:none;pointer-events:none}
+.aframe.dying{opacity:0;transform:scale(.9);transition:opacity 1.2s,transform 1.2s}
+.aframe.fossil{opacity:.18;border-color:var(--border);box-shadow:none}
 
-.flabel{position:absolute;top:7px;left:9px;font-size:8px;color:hsl(var(--chue,150),55%,55%);
-  letter-spacing:.1em;text-transform:uppercase;z-index:10;pointer-events:none;
-  text-shadow:0 1px 4px rgba(0,0,0,.8)}
-
-.aframe iframe{width:100%;height:100%;border:none;display:block}
+.aframe iframe{width:100%;height:100%;border:none;display:block;border-radius:5px;overflow:hidden}
 
 .fossil-cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:6px;color:var(--dim);pointer-events:none}
-.fossil-cover .skull{font-size:26px;opacity:.4}
-.fossil-cover .fname{font-size:11px;letter-spacing:.05em}
-.fossil-cover .fmeta{font-size:9px;color:#2a3a40}
+  justify-content:center;gap:2px;color:var(--dim);pointer-events:none;border-radius:5px}
+.fossil-cover .skull{font-size:14px;opacity:.35}
+.fossil-cover .fname{font-size:6px;letter-spacing:.04em;text-align:center}
+
+/* Frame tooltip */
+.aframe::after{
+  content:attr(data-tip);
+  position:absolute;top:calc(100% + 5px);left:50%;transform:translateX(-50%);
+  background:#0d1215;border:1px solid rgba(255,255,255,.12);
+  color:#9ab0b8;font-size:7px;padding:4px 8px;border-radius:4px;
+  white-space:pre;pointer-events:none;opacity:0;transition:opacity .15s;
+  z-index:200;font-family:'Courier New',monospace;line-height:1.6;
+  min-width:100px;text-align:left}
+.aframe:hover::after{opacity:1}
 
 /* ── FOOTER ───────────────────────────── */
 #footer{grid-column:1/3;border-top:1px solid var(--border);background:var(--bg2);
-  display:flex;align-items:center;gap:16px;padding:0 14px;font-size:10px;color:var(--dim);
+  display:flex;align-items:center;gap:10px;padding:0 12px;font-size:8px;color:var(--dim);
   transition:border-top-color .5s}
 
-.stat{display:flex;align-items:center;gap:5px}
-.val{color:var(--glow);font-weight:bold;font-size:11px}
+.stat{display:flex;align-items:center;gap:4px;position:relative}
+.val{color:var(--glow);font-weight:bold;font-size:9px}
+
+/* Stat tooltips */
+[data-tip]{position:relative;cursor:default}
+[data-tip]::after{
+  content:attr(data-tip);
+  position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:#0d1215;border:1px solid rgba(255,255,255,.12);
+  color:#9ab0b8;font-size:7px;padding:4px 8px;border-radius:4px;
+  white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;
+  z-index:300;font-family:'Courier New',monospace}
+[data-tip]:hover::after{opacity:1}
 
 #footer button{background:none;border:1px solid var(--border);color:var(--dim);
-  padding:4px 10px;border-radius:4px;cursor:pointer;font:inherit;font-size:9px;
-  text-transform:uppercase;letter-spacing:.1em;transition:all .15s}
+  padding:3px 8px;border-radius:3px;cursor:pointer;font:inherit;font-size:7px;
+  text-transform:uppercase;letter-spacing:.1em;transition:all .15s;position:relative}
 #footer button:hover{color:var(--glow);border-color:var(--glow);background:var(--glowfade)}
-#spawn-btn{margin-left:auto;color:var(--glow);border-color:rgba(46,204,154,.4)}
-#spawn-btn:hover{background:var(--glowfade)!important}
-#reset-btn{color:#c0392b;border-color:rgba(192,57,43,.3)}
+#spawn-btn{margin-left:auto;color:var(--glow);border-color:rgba(46,204,154,.35)}
+#reset-btn{color:#c0392b;border-color:rgba(192,57,43,.25)}
 #reset-btn:hover{color:#e74c3c;border-color:#e74c3c;background:rgba(231,76,60,.08)!important}
 
 /* Scrollbars */
@@ -108,14 +126,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   <main id="colony" id="colony"></main>
 
   <footer id="footer">
-    <div class="stat">GEN <span class="val" id="s-gen">0</span></div>
-    <div class="stat">LEVANDE <span class="val" id="s-alive">0</span></div>
-    <div class="stat">FOSSILER <span class="val" id="s-dead">0</span></div>
-    <div class="stat">STIMULI <span class="val" id="s-stimuli">0</span></div>
-    <button onclick="envFood()">+ NÄRING</button>
-    <button onclick="envDanger()">⚡ FARA</button>
-    <button id="spawn-btn" onclick="spawnGen0()">+ SPAWN GEN0</button>
-    <button id="reset-btn" onclick="resetBiotope()">✕ RESET</button>
+    <div class="stat" data-tip="Högsta generationsnummer i kolonin">GEN <span class="val" id="s-gen">0</span></div>
+    <div class="stat" data-tip="Antal amöbor som lever just nu">LEVANDE <span class="val" id="s-alive">0</span></div>
+    <div class="stat" data-tip="Döda amöbor bevarade som fossiler">FOSSILER <span class="val" id="s-dead">0</span></div>
+    <div class="stat" data-tip="Totala stimuli samlade av hela kolonin">STIMULI <span class="val" id="s-stimuli">0</span></div>
+    <button data-tip="Skickar näring till alla levande amöbor (+3 stimuli). Snabbar evolution." onclick="envFood()">+ NÄRING</button>
+    <button data-tip="Utlöser fara i biotopen. Alla amöbor tvingas mutera för att överleva." onclick="envDanger()">⚡ FARA</button>
+    <button id="spawn-btn" data-tip="Föder en ny ursprunglig amöba (gen 0) med slumpmässigt genom." onclick="spawnGen0()">+ SPAWN GEN0</button>
+    <button id="reset-btn" data-tip="Raderar hela kolonin permanent. Kan inte ångras." onclick="resetBiotope()">✕ RESET</button>
   </footer>
 </div>
 
@@ -188,10 +206,7 @@ function spawn(genome) {
   frame.id = 'f-' + genome.id;
   frame.style.setProperty('--chue', genome.traits.hue);
   frame.dataset.id = genome.id;
-
-  const label = document.createElement('div');
-  label.className = 'flabel';
-  label.textContent = `${genome.name} · ${genome.personnummer||'gen'+genome.generation}`;
+  frame.dataset.tip = `${genome.name}\n${genome.personnummer||''}\ngen ${genome.generation}  ·  0 stimuli\n0/4 barn`;
 
   const encoded = encodeGenome(genome);
   const iframe = document.createElement('iframe');
@@ -199,7 +214,6 @@ function spawn(genome) {
   iframe.title = genome.name;
   iframe.loading = 'eager';
 
-  frame.appendChild(label);
   frame.appendChild(iframe);
   document.getElementById('colony').appendChild(frame);
 
@@ -263,6 +277,8 @@ window.addEventListener('message', e => {
     case 'stimuli':
       if (c) {
         c.stimuli = m.total;
+        // Update tooltip
+        c.el.dataset.tip = `${c.genome.name}\n${c.genome.personnummer||''}\ngen ${c.genome.generation}  ·  ${c.stimuli} stimuli\n${c.childCount}/4 barn`;
         stats();
         renderCard(m.id);
       }
