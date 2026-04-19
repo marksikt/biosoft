@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BIOTOPE</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050709;--bg2:#0a0d10;--bg3:#111619;
+  --border:rgba(255,255,255,0.07);
+  --text:#9ab0b8;--dim:#3d5060;
+  --glow:#2ecc9a;--glowfade:rgba(46,204,154,.1);
+  --font:'Courier New',monospace;--sans:system-ui,sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:12px}
+
+#app{display:grid;grid-template-columns:210px 1fr;grid-template-rows:1fr 38px;height:100vh}
+
+/* ── SIDEBAR ──────────────────────────── */
+#sidebar{grid-row:1/2;border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+#sidebar-head{padding:12px 10px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
+#sidebar-head h1{font-size:10px;letter-spacing:.18em;color:var(--glow);text-transform:uppercase;font-weight:normal}
+#sidebar-head .sub{font-size:9px;color:var(--dim);margin-top:2px}
+#family-list{flex:1;padding:6px 6px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+
+.gen-header{font-size:8px;color:var(--dim);padding:6px 6px 2px;letter-spacing:.15em;text-transform:uppercase}
+
+.ccard{padding:7px 9px;border-radius:5px;border:1px solid var(--border);border-left:3px solid transparent;
+  cursor:pointer;transition:background .15s,border-color .15s;position:relative}
+.ccard:hover{background:var(--bg3)}
+.ccard.alive{border-left-color:hsl(var(--chue,150),55%,48%)}
+.ccard.fossil{opacity:.38;border-left-color:var(--dim);pointer-events:none}
+.ccard.selected{background:var(--bg3);border-color:hsl(var(--chue,150),45%,35%)}
+.cname{font-size:11px;font-weight:bold;color:var(--text)}
+.cmeta{font-size:9px;color:var(--dim);margin-top:1px}
+.cstatus{font-size:8px;position:absolute;top:5px;right:7px}
+.cstatus.alive{color:var(--glow)}
+.cstatus.dead{color:var(--dim)}
+
+/* ── COLONY ───────────────────────────── */
+#colony{grid-row:1/2;overflow:auto;padding:14px;display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start;background:
+  radial-gradient(ellipse at 20% 80%, rgba(46,204,154,.03) 0%, transparent 50%),
+  radial-gradient(ellipse at 80% 20%, rgba(46,100,200,.03) 0%, transparent 50%)}
+
+.aframe{width:280px;height:360px;border-radius:10px;overflow:hidden;position:relative;
+  border:1px solid hsl(var(--chue,150),30%,18%);
+  background:var(--bg2);
+  box-shadow:0 0 24px hsla(var(--chue,150),50%,25%,.1);
+  animation:appear .4s ease;transition:opacity .8s,border-color .5s,box-shadow .5s}
+@keyframes appear{from{opacity:0;transform:scale(.93) translateY(6px)}to{opacity:1;transform:none}}
+
+.aframe.dying{opacity:0;transform:scale(.95);transition:opacity 1.2s,transform 1.2s}
+.aframe.fossil{opacity:.22;border-color:var(--border);box-shadow:none;pointer-events:none}
+
+.flabel{position:absolute;top:7px;left:9px;font-size:8px;color:hsl(var(--chue,150),55%,55%);
+  letter-spacing:.1em;text-transform:uppercase;z-index:10;pointer-events:none;
+  text-shadow:0 1px 4px rgba(0,0,0,.8)}
+
+.aframe iframe{width:100%;height:100%;border:none;display:block}
+
+.fossil-cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:6px;color:var(--dim);pointer-events:none}
+.fossil-cover .skull{font-size:26px;opacity:.4}
+.fossil-cover .fname{font-size:11px;letter-spacing:.05em}
+.fossil-cover .fmeta{font-size:9px;color:#2a3a40}
+
+/* ── FOOTER ───────────────────────────── */
+#footer{grid-column:1/3;border-top:1px solid var(--border);background:var(--bg2);
+  display:flex;align-items:center;gap:16px;padding:0 14px;font-size:10px;color:var(--dim);
+  transition:border-top-color .5s}
+
+.stat{display:flex;align-items:center;gap:5px}
+.val{color:var(--glow);font-weight:bold;font-size:11px}
+
+#footer button{background:none;border:1px solid var(--border);color:var(--dim);
+  padding:4px 10px;border-radius:4px;cursor:pointer;font:inherit;font-size:9px;
+  text-transform:uppercase;letter-spacing:.1em;transition:all .15s}
+#footer button:hover{color:var(--glow);border-color:var(--glow);background:var(--glowfade)}
+#spawn-btn{margin-left:auto;color:var(--glow);border-color:rgba(46,204,154,.4)}
+#spawn-btn:hover{background:var(--glowfade)!important}
+#reset-btn{color:#c0392b;border-color:rgba(192,57,43,.3)}
+#reset-btn:hover{color:#e74c3c;border-color:#e74c3c;background:rgba(231,76,60,.08)!important}
+
+/* Scrollbars */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* Flash animation */
+@keyframes flash-glow{0%,100%{border-top-color:var(--border)}50%{border-top-color:var(--glow)}}
+@keyframes flash-danger{0%,100%{border-top-color:var(--border)}50%{border-top-color:#e74c3c}}
+.flash-food{animation:flash-glow .8s ease}
+.flash-danger{animation:flash-danger .8s ease}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <aside id="sidebar">
+    <div id="sidebar-head">
+      <h1>◉ BIOTOPE</h1>
+      <div class="sub" id="colony-sub">koloni laddar...</div>
+    </div>
+    <div id="family-list"></div>
+  </aside>
+
+  <main id="colony" id="colony"></main>
+
+  <footer id="footer">
+    <div class="stat">GEN <span class="val" id="s-gen">0</span></div>
+    <div class="stat">LEVANDE <span class="val" id="s-alive">0</span></div>
+    <div class="stat">FOSSILER <span class="val" id="s-dead">0</span></div>
+    <div class="stat">XP <span class="val" id="s-xp">0</span></div>
+    <button onclick="envFood()">+ NÄRING</button>
+    <button onclick="envDanger()">⚡ FARA</button>
+    <button id="spawn-btn" onclick="spawnGen0()">+ SPAWN GEN0</button>
+    <button id="reset-btn" onclick="resetBiotope()">✕ RESET</button>
+  </footer>
+</div>
+
+<script>
+'use strict';
+
+// ── State ────────────────────────────────────────────────
+const B = {
+  creatures: new Map(), // id → entry
+  nextNum: 1,
+  maxGen: 0,
+  selected: null
+};
+
+// entry = {genome, status:'alive'|'fossil', el, iframe, childCount, xp}
+
+// ── Names ────────────────────────────────────────────────
+const PRE=['Vesi','Mito','Proto','Cyto','Nucleo','Plasma','Ribo','Endo','Karyo','Lyso','Meso','Ecto'];
+const MID=['cyte','plast','some','mere','zoa','phage','morph','blast','soma','glia','pore'];
+
+function mkName(gen, hue) {
+  const s = gen*41 + Math.round(hue);
+  return PRE[s % PRE.length] + MID[Math.floor(s/5) % MID.length];
+}
+
+// ── Genome factory ───────────────────────────────────────
+function mkPersonnummer() {
+  const n = new Date();
+  const Y = n.getFullYear();
+  const M = String(n.getMonth()+1).padStart(2,'0');
+  const D = String(n.getDate()).padStart(2,'0');
+  const h = String(n.getHours()).padStart(2,'0');
+  const m = String(n.getMinutes()).padStart(2,'0');
+  return `${Y}${M}${D}-${h}${m}`;
+}
+
+function mkGenome(generation=0, parentIds=[], parentTraits=null) {
+  const num = B.nextNum++;
+  const hue = parentTraits
+    ? (parentTraits.hue + (Math.random()*50-25) + 360) % 360
+    : Math.random() * 360;
+  const g = {
+    id: `${generation}.${num}`,
+    num, generation, parentIds,
+    born: Date.now(), died: null,
+    personnummer: mkPersonnummer(),
+    xp: 0, childCount: 0,
+    traits: {
+      hue: Math.round(hue),
+      size: parentTraits ? clamp(parentTraits.size+(Math.random()-.5)*.3,.5,1.9) : .8+Math.random()*.7,
+      metabolism: parentTraits ? clamp(parentTraits.metabolism+(Math.random()-.5)*.2,.15,.95) : .3+Math.random()*.6,
+      curiosity: parentTraits ? clamp(parentTraits.curiosity+(Math.random()-.5)*.25,0,1) : Math.random(),
+      resilience: parentTraits ? clamp(parentTraits.resilience+(Math.random()-.5)*.2,.1,1) : Math.random()
+    },
+    mutations: parentTraits?.mutations ? [...parentTraits.mutations].slice(-5) : [],
+    name: ''
+  };
+  g.name = mkName(generation, hue);
+  return g;
+}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+
+// ── Spawn ────────────────────────────────────────────────
+function spawn(genome) {
+  B.maxGen = Math.max(B.maxGen, genome.generation);
+
+  // Colony frame
+  const frame = document.createElement('div');
+  frame.className = 'aframe';
+  frame.id = 'f-' + genome.id;
+  frame.style.setProperty('--chue', genome.traits.hue);
+  frame.dataset.id = genome.id;
+
+  const label = document.createElement('div');
+  label.className = 'flabel';
+  label.textContent = `${genome.name} · ${genome.personnummer||'gen'+genome.generation}`;
+
+  const encoded = encodeGenome(genome);
+  const iframe = document.createElement('iframe');
+  iframe.src = `amoeba.html#${encoded}`;
+  iframe.title = genome.name;
+  iframe.loading = 'eager';
+
+  frame.appendChild(label);
+  frame.appendChild(iframe);
+  document.getElementById('colony').appendChild(frame);
+
+  B.creatures.set(genome.id, {
+    genome, status:'alive',
+    el:frame, iframe,
+    childCount:0, xp:0
+  });
+
+  save(); render(); stats();
+}
+
+function encodeGenome(g) {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(g))));
+}
+
+// ── Fossilize ────────────────────────────────────────────
+function fossilize(id) {
+  const c = B.creatures.get(id);
+  if (!c || c.status!=='alive') return;
+
+  c.status = 'fossil';
+  c.genome.died = Date.now();
+
+  // Signal creature
+  try { c.iframe.contentWindow?.postMessage({type:'die'},'*'); } catch(e) {}
+
+  // Dying animation
+  setTimeout(()=>{
+    c.el.classList.add('dying');
+    setTimeout(()=>{
+      c.el.classList.remove('dying');
+      c.el.classList.add('fossil');
+      c.iframe.remove();
+
+      const cover = document.createElement('div');
+      cover.className = 'fossil-cover';
+      cover.innerHTML = `
+        <div class="skull">☠</div>
+        <div class="fname">${c.genome.name}</div>
+        <div class="fmeta">${c.genome.personnummer||''}</div>
+        <div class="fmeta">${c.childCount} barn · ${c.xp}xp</div>
+      `;
+      c.el.appendChild(cover);
+      save(); render(); stats();
+    }, 1300);
+  }, 300);
+}
+
+// ── postMessage handler ──────────────────────────────────
+window.addEventListener('message', e => {
+  const m = e.data;
+  if (!m || typeof m !== 'object' || !m.id) return;
+  const c = B.creatures.get(m.id);
+
+  switch(m.type) {
+    case 'ready':
+      // creature booted OK
+      break;
+
+    case 'xp':
+      if (c) {
+        c.xp = m.total;
+        stats();
+        renderCard(m.id);
+      }
+      break;
+
+    case 'birth': {
+      if (!c || c.status!=='alive') break;
+      c.childCount++;
+      c.genome.childCount = c.childCount;
+
+      // Build child genome
+      const child = mkGenome(c.genome.generation+1, [c.genome.id], c.genome.traits);
+      if (m.mutation && !child.mutations.includes(m.mutation))
+        child.mutations.push(m.mutation);
+
+      spawn(child);
+
+      // Death rule: parent dies after 4th child
+      if (c.childCount >= 4) {
+        setTimeout(()=>fossilize(m.id), 600);
+      }
+
+      save(); render(); stats();
+      break;
+    }
+
+    case 'mutation':
+      if (c) {
+        if (!c.genome.mutations) c.genome.mutations=[];
+        if (!c.genome.mutations.includes(m.name)) c.genome.mutations.push(m.name);
+        save();
+      }
+      break;
+  }
+});
+
+// ── Render sidebar ────────────────────────────────────────
+function render() {
+  const list = document.getElementById('family-list');
+  const all = [...B.creatures.values()].sort((a,b)=>a.genome.num-b.genome.num);
+
+  // Group by generation
+  const byGen = {};
+  all.forEach(c=>{
+    const g=c.genome.generation;
+    (byGen[g]||(byGen[g]=[])).push(c);
+  });
+
+  list.innerHTML='';
+  Object.keys(byGen).sort((a,b)=>+a-+b).forEach(gen=>{
+    const gh=document.createElement('div');
+    gh.className='gen-header';
+    gh.textContent=`generaton ${gen}`;
+    list.appendChild(gh);
+
+    byGen[gen].forEach(c=>{
+      const card=document.createElement('div');
+      card.className=`ccard ${c.status}${c.genome.id===B.selected?' selected':''}`;
+      card.style.setProperty('--chue', c.genome.traits.hue);
+      card.id=`card-${c.genome.id}`;
+      card.innerHTML=`
+        <div class="cname">${c.genome.name}</div>
+        <div class="cmeta">${c.genome.personnummer||c.genome.id}</div>
+        <div class="cstatus ${c.status==='alive'?'alive':'dead'}">
+          ${c.status==='alive'?`${c.childCount}/4 barn`:'☠ fossil'}
+        </div>
+      `;
+      card.onclick=()=>scrollTo(c.genome.id);
+      list.appendChild(card);
+    });
+  });
+
+  document.getElementById('colony-sub').textContent =
+    `${[...B.creatures.values()].filter(c=>c.status==='alive').length} levande organismer`;
+}
+
+function renderCard(id) {
+  const c=B.creatures.get(id);
+  if(!c) return;
+  const el=document.getElementById('card-'+id);
+  if(!el) return;
+  el.querySelector('.cmeta').textContent=`${c.genome.id} · ${c.xp}xp`;
+  if(c.status==='alive')
+    el.querySelector('.cstatus').textContent=`${c.childCount}/4 barn`;
+}
+
+function scrollTo(id) {
+  B.selected=id;
+  const el=document.getElementById('f-'+id);
+  el?.scrollIntoView({behavior:'smooth',block:'nearest'});
+  render();
+}
+
+// ── Stats ────────────────────────────────────────────────
+function stats() {
+  const alive=[...B.creatures.values()].filter(c=>c.status==='alive').length;
+  const dead=[...B.creatures.values()].filter(c=>c.status==='fossil').length;
+  const xp=[...B.creatures.values()].reduce((s,c)=>s+c.xp,0);
+  document.getElementById('s-gen').textContent=B.maxGen;
+  document.getElementById('s-alive').textContent=alive;
+  document.getElementById('s-dead').textContent=dead;
+  document.getElementById('s-xp').textContent=xp;
+}
+
+// ── Environment events ───────────────────────────────────
+function broadcast(msg) {
+  B.creatures.forEach(c=>{
+    if(c.status==='alive'){
+      try{c.iframe.contentWindow?.postMessage(msg,'*');}catch(e){}
+    }
+  });
+}
+
+function envFood() {
+  broadcast({type:'env',food:1,danger:0});
+  const f=document.getElementById('footer');
+  f.classList.remove('flash-danger'); void f.offsetWidth;
+  f.classList.add('flash-food');
+}
+function envDanger() {
+  broadcast({type:'env',food:0,danger:1});
+  const f=document.getElementById('footer');
+  f.classList.remove('flash-food'); void f.offsetWidth;
+  f.classList.add('flash-danger');
+}
+
+// ── Persist ──────────────────────────────────────────────
+function save() {
+  const data={
+    nextNum:B.nextNum, maxGen:B.maxGen,
+    creatures:[...B.creatures.entries()].map(([id,c])=>({
+      id, genome:c.genome, status:c.status,
+      childCount:c.childCount, xp:c.xp
+    }))
+  };
+  localStorage.setItem('biotope_v2', JSON.stringify(data));
+}
+
+function load() {
+  try {
+    const raw=localStorage.getItem('biotope_v2');
+    if (!raw) return false;
+    const data=JSON.parse(raw);
+    B.nextNum=data.nextNum||1;
+    B.maxGen=data.maxGen||0;
+
+    data.creatures.forEach(item=>{
+      if (item.status==='alive') {
+        // Re-create live iframe
+        const frame=document.createElement('div');
+        frame.className='aframe';
+        frame.id='f-'+item.genome.id;
+        frame.style.setProperty('--chue', item.genome.traits.hue);
+        frame.dataset.id=item.genome.id;
+        const label=document.createElement('div');
+        label.className='flabel';
+        label.textContent=`gen${item.genome.generation} · ${item.genome.name}`;
+        const iframe=document.createElement('iframe');
+        iframe.src=`amoeba.html#${encodeGenome(item.genome)}`;
+        frame.appendChild(label); frame.appendChild(iframe);
+        document.getElementById('colony').appendChild(frame);
+        B.creatures.set(item.id,{
+          genome:item.genome, status:'alive',
+          el:frame, iframe,
+          childCount:item.childCount||0, xp:item.xp||0
+        });
+      } else {
+        // Fossil card
+        const frame=document.createElement('div');
+        frame.className='aframe fossil';
+        frame.style.setProperty('--chue', item.genome.traits?.hue||150);
+        frame.innerHTML=`
+          <div class="flabel">gen${item.genome.generation} · ${item.genome.name}</div>
+          <div class="fossil-cover">
+            <div class="skull">☠</div>
+            <div class="fname">${item.genome.name}</div>
+            <div class="fmeta">gen${item.genome.generation} · ${item.childCount||0} barn · ${item.xp||0}xp</div>
+          </div>`;
+        document.getElementById('colony').appendChild(frame);
+        B.creatures.set(item.id,{
+          genome:item.genome, status:'fossil',
+          el:frame, iframe:null,
+          childCount:item.childCount||0, xp:item.xp||0
+        });
+      }
+    });
+    return B.creatures.size>0;
+  } catch(e) { console.error('load error',e); return false; }
+}
+
+function spawnGen0() { spawn(mkGenome(0,[])); }
+
+function resetBiotope() {
+  if (!confirm('Rensa hela kolonin? Alla fossiler och levande organismer raderas.')) return;
+  localStorage.removeItem('biotope_v2');
+  location.reload();
+}
+
+// ── Init ─────────────────────────────────────────────────
+(function init() {
+  if (!load() || B.creatures.size===0) spawnGen0();
+  render(); stats();
+  setInterval(stats, 4000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AMOEBA</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06090b;--bg2:#0d1215;--bg3:#121a1e;
+  --dim:#3d5060;--text:#a8bcc4;
+  --hue:150;
+  --glow:hsl(var(--hue),65%,55%);
+  --glowfade:hsla(var(--hue),55%,40%,0.18);
+  --font:'Courier New',monospace;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:11px;user-select:none}
+#app{height:100vh;display:grid;grid-template-rows:32px 1fr 20px 56px 34px;overflow:hidden}
+
+/* header */
+#hdr{display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--glow);flex-shrink:0;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
+#name-tag{flex:1;font-size:10px;color:var(--glow);font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xprow{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--dim)}
+#xp-bar{width:40px;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden}
+#xp-fill{height:100%;background:var(--glow);border-radius:2px;width:0%;transition:width .5s}
+
+/* cell area */
+#cell-area{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#cell-svg{width:100%;height:100%}
+
+/* mutations strip */
+#mut-strip{padding:0 8px;display:flex;align-items:center;gap:3px;overflow:hidden;border-top:1px solid rgba(255,255,255,0.04)}
+.mbadge{font-size:8px;padding:1px 5px;border-radius:2px;background:rgba(255,255,255,0.05);color:var(--dim);white-space:nowrap;animation:fadein .3s}
+@keyframes fadein{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+/* conversation */
+#convo{padding:4px 10px;overflow:hidden;display:flex;flex-direction:column;gap:2px;border-top:1px solid rgba(255,255,255,0.04)}
+.cline{font-size:10px;line-height:1.4;opacity:.65;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.cline.c{color:var(--glow);opacity:1}
+.cline.e{color:var(--dim);font-style:italic}
+
+/* controls */
+#ctrl{display:flex;gap:4px;padding:4px 8px;border-top:1px solid rgba(255,255,255,0.04)}
+#ctrl button{flex:1;background:none;border:1px solid rgba(255,255,255,0.09);color:var(--dim);
+  padding:4px 2px;border-radius:4px;cursor:pointer;font:inherit;font-size:8px;
+  text-transform:uppercase;letter-spacing:.1em;transition:all .15s}
+#ctrl button:hover{color:var(--glow);border-color:var(--glow);background:var(--glowfade)}
+#ctrl button:disabled{opacity:.25;pointer-events:none}
+#ctrl button.ready{color:var(--glow);border-color:var(--glow)}
+
+/* dead state */
+body.dead #cell-area{filter:grayscale(1) brightness(.4)}
+body.dead #ctrl{opacity:.2;pointer-events:none}
+body.dead .dot{animation:none;opacity:.3}
+
+/* standalone key row */
+#key-row{display:none;align-items:center;gap:6px;padding:0 8px;border-top:1px solid rgba(255,255,255,0.04);font-size:9px;color:var(--dim)}
+body.standalone #key-row{display:flex}
+#key-row input{flex:1;background:none;border:1px solid rgba(255,255,255,0.09);color:var(--text);padding:2px 6px;border-radius:3px;font:inherit;font-size:9px}
+#key-row button{background:none;border:1px solid rgba(255,255,255,0.09);color:var(--dim);padding:2px 8px;border-radius:3px;cursor:pointer;font:inherit;font-size:9px;transition:all .15s}
+#key-row button:hover{color:var(--glow);border-color:var(--glow)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hdr">
+    <div class="dot" id="status-dot"></div>
+    <div id="name-tag">...</div>
+    <div class="xprow"><span id="xpn">0</span>xp <div id="xp-bar"><div id="xp-fill"></div></div></div>
+  </div>
+
+  <div id="cell-area">
+    <svg id="cell-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="nucgrad" cx="40%" cy="35%">
+          <stop offset="0%" stop-color="white" stop-opacity=".25"/>
+          <stop offset="100%" stop-color="white" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <path id="cbody"/>
+      <path id="cmem" fill="none" stroke-width="1.2" stroke-linecap="round"/>
+      <g id="corg"></g>
+      <circle id="cnuc" r="13" fill="none" stroke-width=".7"/>
+      <circle id="cnuci" r="5" fill="none"/>
+      <circle id="cnucg" r="13" fill="url(#nucgrad)"/>
+    </svg>
+  </div>
+
+  <div id="mut-strip"></div>
+
+  <div id="convo">
+    <div class="cline e" id="init-line">initializing genome...</div>
+  </div>
+
+  <div id="ctrl">
+    <button onclick="doSpeak()">TALA</button>
+    <button onclick="doMutate()">MUTERA</button>
+    <button id="birth-btn" onclick="doBirth()" disabled>FÖDA</button>
+    <button onclick="doExport()" title="Exportera som fristående fil">↗ EXP</button>
+  </div>
+
+  <div id="key-row">
+    <span>API:</span>
+    <input type="password" id="api-key" placeholder="sk-ant-...">
+    <button onclick="saveKey()">SPARA</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Genome ───────────────────────────────────────────────
+const IN_BIOTOPE = window.parent !== window;
+let G = null;
+
+try {
+  const h = location.hash.slice(1);
+  if (h) G = JSON.parse(decodeURIComponent(escape(atob(h))));
+} catch(e) {}
+
+if (!G) {
+  const n=new Date(), pn=`${n.getFullYear()}${String(n.getMonth()+1).padStart(2,'0')}${String(n.getDate()).padStart(2,'0')}-${String(n.getHours()).padStart(2,'0')}${String(n.getMinutes()).padStart(2,'0')}`;
+  G = {
+    id:'g0.solo', generation:0, num:1, parentIds:[],
+    born:Date.now(), died:null, personnummer:pn,
+    xp:0, childCount:0,
+    traits:{hue:150,size:1.0,metabolism:.5,curiosity:.6,resilience:.6},
+    mutations:[], name:'Proto'
+  };
+  if (!IN_BIOTOPE) document.body.classList.add('standalone');
+}
+
+// Apply hue
+document.documentElement.style.setProperty('--hue', G.traits.hue);
+document.getElementById('name-tag').textContent = G.name;
+// Personnummer sub-line
+const pnEl = document.createElement('div');
+pnEl.style.cssText='font-size:8px;color:var(--dim);letter-spacing:.05em;padding:0 10px 3px;border-bottom:1px solid rgba(255,255,255,0.05);font-family:var(--font)';
+pnEl.textContent = G.personnummer || '';
+document.getElementById('hdr').insertAdjacentElement('afterend', pnEl);
+
+// ── XP ───────────────────────────────────────────────────
+const XP_MAX = 20;
+let xp = G.xp || 0;
+
+function addXP(n) {
+  xp = Math.min(xp + n, XP_MAX * 2);
+  G.xp = xp;
+  const pct = Math.min((xp / XP_MAX) * 100, 100);
+  document.getElementById('xp-fill').style.width = pct + '%';
+  document.getElementById('xpn').textContent = xp;
+  const btn = document.getElementById('birth-btn');
+  if (xp >= XP_MAX) {
+    btn.disabled = false;
+    btn.classList.add('ready');
+  }
+  if (IN_BIOTOPE) send({type:'xp', id:G.id, total:xp});
+}
+addXP(0);
+
+// ── Cell animation ───────────────────────────────────────
+const CX=100, CY=100;
+let T=0;
+
+function catmull(pts) {
+  const n = pts.length;
+  let d = `M${f(pts[0][0])} ${f(pts[0][1])}`;
+  for (let i=0;i<n;i++) {
+    const p0=pts[(i-1+n)%n], p1=pts[i], p2=pts[(i+1)%n], p3=pts[(i+2)%n];
+    const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+    const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+    d+=` C${f(c1x)} ${f(c1y)},${f(c2x)} ${f(c2y)},${f(p2[0])} ${f(p2[1])}`;
+  }
+  return d+'Z';
+}
+function f(v){return v.toFixed(2)}
+
+function blobPts(cx,cy,r,n,t,chaos) {
+  return Array.from({length:n},(_,i)=>{
+    const a=(i/n)*Math.PI*2 - Math.PI/2;
+    const j=chaos*(
+      .5*Math.sin(a*2.3+t*.9)+
+      .3*Math.sin(a*3.7+t*.6)+
+      .2*Math.sin(a*1.1+t*1.3)
+    );
+    const rad=r*(1+j);
+    return [cx+Math.cos(a)*rad, cy+Math.sin(a)*rad];
+  });
+}
+
+function drawOrganelles(t) {
+  const g=document.getElementById('corg');
+  g.innerHTML='';
+  const h=G.traits.hue, gen=G.generation;
+  const nMito=2+Math.min(gen*2,8);
+  for(let i=0;i<nMito;i++){
+    const a=(i/nMito)*Math.PI*2 + t*.25 + i;
+    const dist=20+8*Math.sin(t*.8+i*1.3);
+    const x=CX+Math.cos(a)*dist, y=CY+Math.sin(a)*dist;
+    const rot=(a*180/Math.PI).toFixed(1);
+    const el=document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+    el.setAttribute('cx',f(x)); el.setAttribute('cy',f(y));
+    el.setAttribute('rx','3.5'); el.setAttribute('ry','1.8');
+    el.setAttribute('transform',`rotate(${rot},${f(x)},${f(y)})`);
+    el.setAttribute('fill',`hsla(${(h+50)%360},55%,65%,.4)`);
+    el.setAttribute('stroke',`hsla(${(h+50)%360},70%,70%,.35)`);
+    el.setAttribute('stroke-width','.4');
+    g.appendChild(el);
+  }
+  // Vacuoles if mutation present
+  if (G.mutations.includes('vacuole_formation')) {
+    for(let i=0;i<3;i++){
+      const a=(i/3)*Math.PI*2 + t*.15;
+      const x=CX+Math.cos(a)*35, y=CY+Math.sin(a)*30;
+      const el=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('cx',f(x)); el.setAttribute('cy',f(y));
+      el.setAttribute('r','5');
+      el.setAttribute('fill',`hsla(${h},30%,60%,.15)`);
+      el.setAttribute('stroke',`hsla(${h},50%,60%,.3)`);
+      el.setAttribute('stroke-width','.4');
+      g.appendChild(el);
+    }
+  }
+}
+
+function frame(ts) {
+  T = ts * .001 * (.4 + G.traits.metabolism * .5);
+  const r = 50 * G.traits.size;
+  const chaos = .1 + G.traits.curiosity * .12;
+  const h = G.traits.hue;
+  const pts = blobPts(CX,CY,r,14,T*.7,chaos*1.4);
+  const d = catmull(pts);
+
+  document.getElementById('cbody').setAttribute('d',d);
+  document.getElementById('cbody').setAttribute('fill',`hsla(${h},40%,30%,.18)`);
+  document.getElementById('cmem').setAttribute('d',d);
+  document.getElementById('cmem').setAttribute('stroke',`hsla(${h},65%,58%,.9)`);
+
+  const nr = 11+2.5*Math.sin(T*1.1);
+  const nuc=document.getElementById('cnuc');
+  nuc.setAttribute('cx',CX); nuc.setAttribute('cy',CY); nuc.setAttribute('r',f(nr));
+  nuc.setAttribute('fill',`hsla(${h},60%,40%,.2)`);
+  nuc.setAttribute('stroke',`hsla(${h},75%,65%,.65)`);
+
+  document.getElementById('cnuci').setAttribute('cx',CX);
+  document.getElementById('cnuci').setAttribute('cy',CY);
+  document.getElementById('cnuci').setAttribute('r',f(nr*.38));
+  document.getElementById('cnuci').setAttribute('fill',`hsla(${h},85%,72%,.55)`);
+  document.getElementById('cnucg').setAttribute('cx',CX);
+  document.getElementById('cnucg').setAttribute('cy',CY);
+  document.getElementById('cnucg').setAttribute('r',f(nr));
+
+  drawOrganelles(T);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ── Mutations ────────────────────────────────────────────
+const MUT_POOL=[
+  'chemotaxis','phagocytosis','endocytosis','pseudopod_ext',
+  'vacuole_formation','membrane_flux','nucleus_expansion','glycolysis_boost',
+  'mitochondria_pro','quorum_sensing','symbiosis','photophilia',
+  'rapid_division','api_v2'
+];
+
+function renderMuts() {
+  document.getElementById('mut-strip').innerHTML =
+    G.mutations.map(m=>`<span class="mbadge">${m}</span>`).join('');
+}
+renderMuts();
+
+function doMutate() {
+  const avail = MUT_POOL.filter(m=>!G.mutations.includes(m));
+  if (!avail.length) return;
+  const m = avail[Math.floor(Math.random()*avail.length)];
+  G.mutations.push(m);
+  // Trait drift
+  const t = G.traits;
+  if (m==='rapid_division') t.metabolism=Math.min(t.metabolism+.1,1);
+  if (m==='photophilia') t.curiosity=Math.min(t.curiosity+.15,1);
+  if (m==='membrane_flux') t.resilience=Math.min(t.resilience+.1,1);
+  renderMuts();
+  addXP(3);
+  clog(`◎ mutation: ${m}`,'e');
+  if (IN_BIOTOPE) send({type:'mutation',id:G.id,name:m});
+}
+
+// ── Conversation ─────────────────────────────────────────
+const REFLEXES=[
+  'Membranspänningen förändras. Jag rör mig mot ljuset.',
+  'Kemoattraktanter detekterade längs gradienten.',
+  'Vacuolen expanderar. Osmotisk balans återfunnen.',
+  'Kärnprotein syntetiserat. Delning förberedd.',
+  'Signal från angränsande cell: pseudopodextension.',
+  'Mitokondrier aktiverade. ATP-flödet ökar.',
+  'Genomet muttrar. Mutationen är nu en del av mig.',
+  'Membranreceptorer vibrerar. Biotopen är hungrig.',
+  'Jag är gammal nu. Cellerna söker sig mot delning.',
+  'Cytoplasman rör sig. Organellerna dansar.',
+];
+
+let speakBusy = false;
+
+async function doSpeak() {
+  if (speakBusy) return;
+  speakBusy = true;
+  setTimeout(()=>speakBusy=false, 3500);
+  addXP(1);
+  const key = localStorage.getItem('ant_key');
+  if (key) {
+    try {
+      const sys=`Du är ${G.name}, en amöba i generation ${G.generation}. Mutationer: ${G.mutations.join(', ')||'inga'}. Metabolism: ${G.traits.metabolism.toFixed(2)}, nyfikenhet: ${G.traits.curiosity.toFixed(2)}. Svara som ett levande cell-medvetande: poetiskt, kort, biologiskt exakt. Max 1-2 meningar.`;
+      const r=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:100,system:sys,
+          messages:[{role:'user',content:'Vad observerar du just nu?'}]})
+      });
+      if (r.ok){const d=await r.json();const t=d.content?.[0]?.text;if(t){clog(t,'c');return;}}
+    } catch(e){}
+  }
+  clog(REFLEXES[Math.floor(Math.random()*REFLEXES.length)], 'c');
+}
+
+function clog(txt, cls='c') {
+  const c=document.getElementById('convo');
+  while(c.children.length>=3) c.removeChild(c.firstChild);
+  const d=document.createElement('div');
+  d.className='cline '+cls;
+  d.textContent=txt;
+  c.appendChild(d);
+}
+
+// ── Birth ────────────────────────────────────────────────
+function doBirth() {
+  if (xp < XP_MAX) return;
+  clog('Delning initieras. Membran sträcks mot evigheten.','e');
+  if (IN_BIOTOPE) {
+    send({type:'birth', id:G.id, mutation:G.mutations.slice(-1)[0]||null});
+  } else {
+    doExport(true);
+  }
+  xp=0; addXP(0);
+  const btn=document.getElementById('birth-btn');
+  btn.disabled=true; btn.classList.remove('ready');
+}
+
+// ── Export ───────────────────────────────────────────────
+function doExport(asChild=false) {
+  const n=new Date(), pn=`${n.getFullYear()}${String(n.getMonth()+1).padStart(2,'0')}${String(n.getDate()).padStart(2,'0')}-${String(n.getHours()).padStart(2,'0')}${String(n.getMinutes()).padStart(2,'0')}`;
+  const childG = asChild ? {
+    ...G,
+    id:`${G.generation+1}.${Date.now().toString(36)}`,
+    generation:G.generation+1,
+    parentIds:[G.id],
+    born:Date.now(), died:null, personnummer:pn,
+    xp:0, childCount:0,
+    traits:{...G.traits, hue:(G.traits.hue+25+Math.floor(Math.random()*30))%360},
+    mutations:[...G.mutations].slice(-5),
+    name: G.name + '²'
+  } : G;
+  const enc = btoa(unescape(encodeURIComponent(JSON.stringify(childG))));
+  const blob = new Blob([
+    `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="refresh" content="0;url=amoeba.html#${enc}"></head><body></body></html>`
+  ],{type:'text/html'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`amoeba_${childG.name}_gen${childG.generation}.html`;
+  a.click();
+  clog(`↗ ${childG.name} exporterad som fristående fil.`,'e');
+}
+
+// ── API key ──────────────────────────────────────────────
+function saveKey() {
+  const v=document.getElementById('api-key').value.trim();
+  if (v) { localStorage.setItem('ant_key',v); clog('✓ API-nyckel sparad.','e'); }
+}
+
+// ── postMessage ──────────────────────────────────────────
+function send(msg){ try{window.parent.postMessage(msg,'*');}catch(e){} }
+
+window.addEventListener('message', e=>{
+  const m=e.data;
+  if(!m||typeof m!=='object') return;
+  if (m.type==='die') {
+    document.body.classList.add('dead');
+    document.getElementById('status-dot').style.background='#3a4a50';
+    clog('Membranintegriteten kollapsar. Arvet lever vidare.','e');
+  }
+  if (m.type==='env') {
+    if (m.food>.5){clog('Näring absorberas. Energi.','e');addXP(3);}
+    if (m.danger>.5){clog('Fara detekterad! Mutation aktiveras.','e');doMutate();}
+  }
+});
+
+// ── Boot ─────────────────────────────────────────────────
+if (IN_BIOTOPE) {
+  send({type:'ready', id:G.id});
+  setTimeout(doSpeak, 1200+Math.random()*2000);
+  // Auto-speak occasionally
+  setInterval(()=>{if(Math.random()<.3) doSpeak();}, 30000+Math.random()*30000);
+}
+
+// Init line → fade
+setTimeout(()=>{
+  const il=document.getElementById('init-line');
+  if(il) il.textContent=`${G.name} · gen${G.generation} · ${IN_BIOTOPE?'biotop':'fristående'}`;
+}, 1000);
+
+// API key hint for standalone
+if (!IN_BIOTOPE) {
+  const stored = localStorage.getItem('ant_key');
+  if (stored) document.getElementById('api-key').value = stored;
+}
+</script>
+</body>
+</html>
