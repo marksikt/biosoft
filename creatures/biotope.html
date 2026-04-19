@@ -111,7 +111,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <div class="stat">GEN <span class="val" id="s-gen">0</span></div>
     <div class="stat">LEVANDE <span class="val" id="s-alive">0</span></div>
     <div class="stat">FOSSILER <span class="val" id="s-dead">0</span></div>
-    <div class="stat">XP <span class="val" id="s-xp">0</span></div>
+    <div class="stat">STIMULI <span class="val" id="s-stimuli">0</span></div>
     <button onclick="envFood()">+ NÄRING</button>
     <button onclick="envDanger()">⚡ FARA</button>
     <button id="spawn-btn" onclick="spawnGen0()">+ SPAWN GEN0</button>
@@ -130,7 +130,7 @@ const B = {
   selected: null
 };
 
-// entry = {genome, status:'alive'|'fossil', el, iframe, childCount, xp}
+// entry = {genome, status:'alive'|'fossil', el, iframe, childCount, stimuli}
 
 // ── Names ────────────────────────────────────────────────
 const PRE=['Vesi','Mito','Proto','Cyto','Nucleo','Plasma','Ribo','Endo','Karyo','Lyso','Meso','Ecto'];
@@ -162,7 +162,7 @@ function mkGenome(generation=0, parentIds=[], parentTraits=null) {
     num, generation, parentIds,
     born: Date.now(), died: null,
     personnummer: mkPersonnummer(),
-    xp: 0, childCount: 0,
+    stimuli: 0, childCount: 0,
     traits: {
       hue: Math.round(hue),
       size: parentTraits ? clamp(parentTraits.size+(Math.random()-.5)*.3,.5,1.9) : .8+Math.random()*.7,
@@ -206,7 +206,7 @@ function spawn(genome) {
   B.creatures.set(genome.id, {
     genome, status:'alive',
     el:frame, iframe,
-    childCount:0, xp:0
+    childCount:0, stimuli:0
   });
 
   save(); render(); stats();
@@ -241,7 +241,7 @@ function fossilize(id) {
         <div class="skull">☠</div>
         <div class="fname">${c.genome.name}</div>
         <div class="fmeta">${c.genome.personnummer||''}</div>
-        <div class="fmeta">${c.childCount} barn · ${c.xp}xp</div>
+        <div class="fmeta">${c.childCount} barn · ${c.stimuli}stimuli</div>
       `;
       c.el.appendChild(cover);
       save(); render(); stats();
@@ -260,9 +260,9 @@ window.addEventListener('message', e => {
       // creature booted OK
       break;
 
-    case 'xp':
+    case 'stimuli':
       if (c) {
-        c.xp = m.total;
+        c.stimuli = m.total;
         stats();
         renderCard(m.id);
       }
@@ -344,7 +344,7 @@ function renderCard(id) {
   if(!c) return;
   const el=document.getElementById('card-'+id);
   if(!el) return;
-  el.querySelector('.cmeta').textContent=`${c.genome.id} · ${c.xp}xp`;
+  el.querySelector('.cmeta').textContent=`${c.genome.id} · ${c.stimuli}stimuli`;
   if(c.status==='alive')
     el.querySelector('.cstatus').textContent=`${c.childCount}/4 barn`;
 }
@@ -360,11 +360,11 @@ function scrollTo(id) {
 function stats() {
   const alive=[...B.creatures.values()].filter(c=>c.status==='alive').length;
   const dead=[...B.creatures.values()].filter(c=>c.status==='fossil').length;
-  const xp=[...B.creatures.values()].reduce((s,c)=>s+c.xp,0);
+  const stimuli=[...B.creatures.values()].reduce((s,c)=>s+c.stimuli,0);
   document.getElementById('s-gen').textContent=B.maxGen;
   document.getElementById('s-alive').textContent=alive;
   document.getElementById('s-dead').textContent=dead;
-  document.getElementById('s-xp').textContent=xp;
+  document.getElementById('s-stimuli').textContent=stimuli;
 }
 
 // ── Environment events ───────────────────────────────────
@@ -395,7 +395,7 @@ function save() {
     nextNum:B.nextNum, maxGen:B.maxGen,
     creatures:[...B.creatures.entries()].map(([id,c])=>({
       id, genome:c.genome, status:c.status,
-      childCount:c.childCount, xp:c.xp
+      childCount:c.childCount, stimuli:c.stimuli
     }))
   };
   localStorage.setItem('biotope_v2', JSON.stringify(data));
@@ -427,7 +427,7 @@ function load() {
         B.creatures.set(item.id,{
           genome:item.genome, status:'alive',
           el:frame, iframe,
-          childCount:item.childCount||0, xp:item.xp||0
+          childCount:item.childCount||0, stimuli:item.stimuli||0
         });
       } else {
         // Fossil card
@@ -439,13 +439,13 @@ function load() {
           <div class="fossil-cover">
             <div class="skull">☠</div>
             <div class="fname">${item.genome.name}</div>
-            <div class="fmeta">gen${item.genome.generation} · ${item.childCount||0} barn · ${item.xp||0}xp</div>
+            <div class="fmeta">gen${item.genome.generation} · ${item.childCount||0} barn · ${item.stimuli||0}stimuli</div>
           </div>`;
         document.getElementById('colony').appendChild(frame);
         B.creatures.set(item.id,{
           genome:item.genome, status:'fossil',
           el:frame, iframe:null,
-          childCount:item.childCount||0, xp:item.xp||0
+          childCount:item.childCount||0, stimuli:item.stimuli||0
         });
       }
     });

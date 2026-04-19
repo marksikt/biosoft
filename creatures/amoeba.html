@@ -22,9 +22,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .dot{width:7px;height:7px;border-radius:50%;background:var(--glow);flex-shrink:0;animation:pulse 2s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
 #name-tag{flex:1;font-size:10px;color:var(--glow);font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.xprow{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--dim)}
-#xp-bar{width:40px;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden}
-#xp-fill{height:100%;background:var(--glow);border-radius:2px;width:0%;transition:width .5s}
+.stimulirow{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--dim)}
+#stimuli-bar{width:40px;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden}
+#stimuli-fill{height:100%;background:var(--glow);border-radius:2px;width:0%;transition:width .5s}
 
 /* cell area */
 #cell-area{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
@@ -68,7 +68,7 @@ body.standalone #key-row{display:flex}
   <div id="hdr">
     <div class="dot" id="status-dot"></div>
     <div id="name-tag">...</div>
-    <div class="xprow"><span id="xpn">0</span>xp <div id="xp-bar"><div id="xp-fill"></div></div></div>
+    <div class="stimulirow"><span id="stimulin">0</span>stimuli <div id="stimuli-bar"><div id="stimuli-fill"></div></div></div>
   </div>
 
   <div id="cell-area">
@@ -125,7 +125,7 @@ if (!G) {
   G = {
     id:'g0.solo', generation:0, num:1, parentIds:[],
     born:Date.now(), died:null, personnummer:pn,
-    xp:0, childCount:0,
+    stimuli:0, childCount:0,
     traits:{hue:150,size:1.0,metabolism:.5,curiosity:.6,resilience:.6},
     mutations:[], name:'Proto'
   };
@@ -141,24 +141,24 @@ pnEl.style.cssText='font-size:8px;color:var(--dim);letter-spacing:.05em;padding:
 pnEl.textContent = G.personnummer || '';
 document.getElementById('hdr').insertAdjacentElement('afterend', pnEl);
 
-// ── XP ───────────────────────────────────────────────────
-const XP_MAX = 20;
-let xp = G.xp || 0;
+// ── STIMULI ───────────────────────────────────────────────────
+const STIMULI_MAX = 20;
+let stimuli = G.stimuli || 0;
 
-function addXP(n) {
-  xp = Math.min(xp + n, XP_MAX * 2);
-  G.xp = xp;
-  const pct = Math.min((xp / XP_MAX) * 100, 100);
-  document.getElementById('xp-fill').style.width = pct + '%';
-  document.getElementById('xpn').textContent = xp;
+function addStimuli(n) {
+  stimuli = Math.min(stimuli + n, STIMULI_MAX * 2);
+  G.stimuli = stimuli;
+  const pct = Math.min((stimuli / STIMULI_MAX) * 100, 100);
+  document.getElementById('stimuli-fill').style.width = pct + '%';
+  document.getElementById('stimulin').textContent = stimuli;
   const btn = document.getElementById('birth-btn');
-  if (xp >= XP_MAX) {
+  if (stimuli >= STIMULI_MAX) {
     btn.disabled = false;
     btn.classList.add('ready');
   }
-  if (IN_BIOTOPE) send({type:'xp', id:G.id, total:xp});
+  if (IN_BIOTOPE) send({type:'stimuli', id:G.id, total:stimuli});
 }
-addXP(0);
+addStimuli(0);
 
 // ── Cell animation ───────────────────────────────────────
 const CX=100, CY=100;
@@ -282,7 +282,7 @@ function doMutate() {
   if (m==='photophilia') t.curiosity=Math.min(t.curiosity+.15,1);
   if (m==='membrane_flux') t.resilience=Math.min(t.resilience+.1,1);
   renderMuts();
-  addXP(3);
+  addStimuli(3);
   clog(`◎ mutation: ${m}`,'e');
   if (IN_BIOTOPE) send({type:'mutation',id:G.id,name:m});
 }
@@ -307,7 +307,7 @@ async function doSpeak() {
   if (speakBusy) return;
   speakBusy = true;
   setTimeout(()=>speakBusy=false, 3500);
-  addXP(1);
+  addStimuli(1);
   const key = localStorage.getItem('ant_key');
   if (key) {
     try {
@@ -335,14 +335,14 @@ function clog(txt, cls='c') {
 
 // ── Birth ────────────────────────────────────────────────
 function doBirth() {
-  if (xp < XP_MAX) return;
+  if (stimuli < STIMULI_MAX) return;
   clog('Delning initieras. Membran sträcks mot evigheten.','e');
   if (IN_BIOTOPE) {
     send({type:'birth', id:G.id, mutation:G.mutations.slice(-1)[0]||null});
   } else {
     doExport(true);
   }
-  xp=0; addXP(0);
+  stimuli=0; addStimuli(0);
   const btn=document.getElementById('birth-btn');
   btn.disabled=true; btn.classList.remove('ready');
 }
@@ -356,7 +356,7 @@ function doExport(asChild=false) {
     generation:G.generation+1,
     parentIds:[G.id],
     born:Date.now(), died:null, personnummer:pn,
-    xp:0, childCount:0,
+    stimuli:0, childCount:0,
     traits:{...G.traits, hue:(G.traits.hue+25+Math.floor(Math.random()*30))%360},
     mutations:[...G.mutations].slice(-5),
     name: G.name + '²'
@@ -390,7 +390,7 @@ window.addEventListener('message', e=>{
     clog('Membranintegriteten kollapsar. Arvet lever vidare.','e');
   }
   if (m.type==='env') {
-    if (m.food>.5){clog('Näring absorberas. Energi.','e');addXP(3);}
+    if (m.food>.5){clog('Näring absorberas. Energi.','e');addStimuli(3);}
     if (m.danger>.5){clog('Fara detekterad! Mutation aktiveras.','e');doMutate();}
   }
 });
