@@ -1,489 +1,521 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="ro">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BIOTOPE</title>
+<title>BIOTOP — Lac Biologic</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#050709;--bg2:#0a0d10;--bg3:#111619;
+  --bg:#040709;--bg2:#070c10;
   --border:rgba(255,255,255,0.07);
-  --text:#9ab0b8;--dim:#3d5060;
+  --text:#9ab0b8;--dim:#3a5060;
   --glow:#2ecc9a;--glowfade:rgba(46,204,154,.1);
-  --font:'Courier New',monospace;--sans:system-ui,sans-serif;
+  --font:'Courier New',monospace;
 }
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:12px}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:var(--font);font-size:12px;line-height:1.5}
+#app{display:grid;grid-template-columns:210px 1fr;grid-template-rows:1fr 42px;height:100vh}
 
-#app{display:grid;grid-template-columns:210px 1fr;grid-template-rows:1fr 38px;height:100vh}
-
-/* ── SIDEBAR ──────────────────────────── */
-#sidebar{grid-row:1/2;border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
-#sidebar-head{padding:12px 10px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
-#sidebar-head h1{font-size:10px;letter-spacing:.18em;color:var(--glow);text-transform:uppercase;font-weight:normal}
-#sidebar-head .sub{font-size:9px;color:var(--dim);margin-top:2px}
-#family-list{flex:1;padding:6px 6px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
-
-.gen-header{font-size:8px;color:var(--dim);padding:6px 6px 2px;letter-spacing:.15em;text-transform:uppercase}
-
-.ccard{padding:7px 9px;border-radius:5px;border:1px solid var(--border);border-left:3px solid transparent;
-  cursor:pointer;transition:background .15s,border-color .15s;position:relative}
-.ccard:hover{background:var(--bg3)}
+/* SIDEBAR */
+#sidebar{grid-row:1/2;border-right:1px solid var(--border);
+  overflow-y:auto;display:flex;flex-direction:column}
+#sb-head{padding:14px 12px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+#sb-head h1{font-size:11px;letter-spacing:.18em;color:var(--glow);text-transform:uppercase;font-weight:normal}
+#sb-sub{font-size:10px;color:var(--dim);margin-top:3px}
+#family-list{flex:1;padding:6px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.gen-header{font-size:9px;color:var(--dim);padding:8px 6px 3px;letter-spacing:.15em;text-transform:uppercase}
+.ccard{padding:8px 10px;border-radius:5px;border:1px solid var(--border);
+  border-left:3px solid transparent;cursor:pointer;transition:background .15s;position:relative}
+.ccard:hover{background:rgba(255,255,255,.03)}
 .ccard.alive{border-left-color:hsl(var(--chue,150),55%,48%)}
-.ccard.fossil{opacity:.38;border-left-color:var(--dim);pointer-events:none}
-.ccard.selected{background:var(--bg3);border-color:hsl(var(--chue,150),45%,35%)}
-.cname{font-size:11px;font-weight:bold;color:var(--text)}
-.cmeta{font-size:9px;color:var(--dim);margin-top:1px}
-.cstatus{font-size:8px;position:absolute;top:5px;right:7px}
+.ccard.fossil{opacity:.32;pointer-events:none}
+.cname{font-size:12px;font-weight:bold;color:var(--text)}
+.cmeta{font-size:10px;color:var(--dim);margin-top:2px}
+.cstatus{font-size:9px;position:absolute;top:7px;right:8px}
 .cstatus.alive{color:var(--glow)}
 .cstatus.dead{color:var(--dim)}
 
-/* ── COLONY ───────────────────────────── */
-#colony{grid-row:1/2;overflow:auto;padding:16px;display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start;background:
-  radial-gradient(ellipse at 20% 80%, rgba(46,204,154,.03) 0%, transparent 50%),
-  radial-gradient(ellipse at 80% 20%, rgba(46,100,200,.03) 0%, transparent 50%)}
+/* LAC */
+#lake{grid-row:1/2;position:relative;overflow:hidden;
+  background:
+    radial-gradient(ellipse at 22% 28%, rgba(46,160,120,.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 78% 72%, rgba(46,90,200,.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, #060e14 0%, #040709 100%)}
+#lake::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 50%,transparent 40%,rgba(2,4,6,.55) 100%);
+  pointer-events:none;z-index:10}
 
-.aframe{width:189px;height:189px;border-radius:10px;overflow:visible;position:relative;
-  border:1px solid hsl(var(--chue,150),28%,18%);
-  background:var(--bg2);
-  box-shadow:0 0 18px hsla(var(--chue,150),50%,25%,.12);
-  animation:appear .4s ease;transition:opacity .8s,border-color .5s,box-shadow .5s;
-  cursor:default}
-.aframe:hover{border-color:hsl(var(--chue,150),55%,40%);box-shadow:0 0 22px hsla(var(--chue,150),60%,40%,.25);z-index:20}
-@keyframes appear{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:none}}
+/* UNITATE AMIBĂ */
+.aunit{position:absolute;left:0;top:0;display:flex;align-items:flex-start;gap:10px;
+  animation:appar .5s ease;will-change:transform;z-index:5}
+@keyframes appar{from{opacity:0;transform:scale(.82)}to{opacity:1}}
+.aunit.fossil{opacity:.18;pointer-events:none}
+.aunit.fossil .ablob{filter:grayscale(1)brightness(.35)}
+.ablob{width:3.5cm;height:3.5cm;flex-shrink:0;overflow:visible;cursor:default;
+  filter:drop-shadow(0 0 6px hsla(var(--chue,150),60%,50%,.25))}
+.ablob:hover{filter:drop-shadow(0 0 10px hsla(var(--chue,150),65%,55%,.55))}
+.afossil-label{width:3.5cm;text-align:center;font-size:10px;color:var(--dim);
+  margin-top:4px;letter-spacing:.04em}
 
-.aframe.dying{opacity:0;transform:scale(.92);transition:opacity 1.2s,transform 1.2s}
-.aframe.fossil{opacity:.22;border-color:var(--border);box-shadow:none}
+/* PANOU LOG */
+.alog{width:176px;background:rgba(4,9,14,.9);border:1px solid rgba(255,255,255,.07);
+  border-radius:7px;display:flex;flex-direction:column;overflow:hidden;
+  backdrop-filter:blur(5px);flex-shrink:0;margin-top:2px;
+  max-height:calc(3.5cm + 70px)}
+.alog-comment{display:flex;gap:5px;padding:7px 8px;border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.02)}
+.alog-cinput{flex:1;min-width:0;background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);color:var(--text);
+  font-family:var(--font);font-size:11px;padding:4px 7px;border-radius:3px;outline:none}
+.alog-cinput::placeholder{color:var(--dim)}
+.alog-cinput:focus{border-color:rgba(46,204,154,.4);background:rgba(46,204,154,.04)}
+.alog-csend{background:none;border:1px solid rgba(255,255,255,.1);color:var(--dim);
+  cursor:pointer;padding:4px 8px;border-radius:3px;font-family:var(--font);
+  font-size:13px;transition:all .15s;line-height:1}
+.alog-csend:hover{color:var(--glow);border-color:var(--glow)}
+.alog-name{padding:5px 8px;font-size:11px;font-weight:bold;
+  color:hsl(var(--chue,150),55%,55%);border-bottom:1px solid var(--border);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alog-stim{display:flex;align-items:center;gap:5px;padding:4px 8px;
+  font-size:10px;color:var(--dim);border-bottom:1px solid var(--border)}
+.alog-stimn{color:hsl(var(--chue,150),60%,58%);font-weight:bold}
+.alog-sbar{flex:1;height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+.alog-sfill{height:100%;background:hsl(var(--chue,150),55%,48%);border-radius:2px;transition:width .4s}
+.alog-entries{flex:1;overflow-y:auto;padding:5px 8px;display:flex;
+  flex-direction:column;gap:2px;min-height:55px}
+.alog-entry{font-size:10px;line-height:1.45;word-break:break-word}
+.alog-entry.speech{color:hsl(var(--chue,150),50%,60%);font-style:italic}
+.alog-entry.event{color:var(--dim)}
+.alog-entry.comment{color:var(--text)}
+.alog-acts{display:flex;gap:3px;padding:5px 7px;border-top:1px solid var(--border)}
+.alog-abtn{flex:1;background:none;border:1px solid rgba(255,255,255,.08);
+  color:var(--dim);padding:4px 2px;border-radius:3px;cursor:pointer;
+  font-family:var(--font);font-size:9px;text-transform:uppercase;
+  letter-spacing:.07em;transition:all .15s}
+.alog-abtn:hover{color:var(--glow);border-color:var(--glow);background:var(--glowfade)}
+.alog-abtn:disabled{opacity:.2;pointer-events:none}
+.alog-abtn.ready{color:var(--glow);border-color:var(--glow)}
 
-.aframe iframe{width:100%;height:100%;border:none;display:block;border-radius:9px;overflow:hidden}
-
-.fossil-cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:5px;color:var(--dim);pointer-events:none;border-radius:9px}
-.fossil-cover .skull{font-size:22px;opacity:.35}
-.fossil-cover .fname{font-size:11px;letter-spacing:.05em;text-align:center}
-.fossil-cover .fmeta{font-size:9px;color:#2a3a40;text-align:center}
-
-/* Frame tooltip */
-.aframe::after{
-  content:attr(data-tip);
-  position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);
-  background:#0d1215;border:1px solid rgba(255,255,255,.12);
-  color:#9ab0b8;font-size:9px;padding:5px 10px;border-radius:5px;
-  white-space:pre;pointer-events:none;opacity:0;transition:opacity .15s;
-  z-index:200;font-family:'Courier New',monospace;line-height:1.7;
-  min-width:130px;text-align:left}
-.aframe:hover::after{opacity:1}
-
-/* ── FOOTER ───────────────────────────── */
+/* FOOTER */
 #footer{grid-column:1/3;border-top:1px solid var(--border);background:var(--bg2);
-  display:flex;align-items:center;gap:14px;padding:0 14px;font-size:10px;color:var(--dim);
-  transition:border-top-color .5s}
-
-.stat{display:flex;align-items:center;gap:5px;position:relative}
-.val{color:var(--glow);font-weight:bold;font-size:11px}
-
-/* Stat tooltips */
-[data-tip]{position:relative;cursor:default}
-[data-tip]::after{
-  content:attr(data-tip);
-  position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
-  background:#0d1215;border:1px solid rgba(255,255,255,.12);
-  color:#9ab0b8;font-size:8px;padding:4px 9px;border-radius:4px;
-  white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;
-  z-index:300;font-family:'Courier New',monospace}
-[data-tip]:hover::after{opacity:1}
-
+  display:flex;align-items:center;gap:14px;padding:0 14px;
+  font-size:11px;color:var(--dim);transition:border-top-color .5s}
+.stat{display:flex;align-items:center;gap:5px}
+.val{color:var(--glow);font-weight:bold;font-size:12px}
+.stat-sep{color:var(--border)}
 #footer button{background:none;border:1px solid var(--border);color:var(--dim);
-  padding:4px 10px;border-radius:4px;cursor:pointer;font:inherit;font-size:9px;
-  text-transform:uppercase;letter-spacing:.1em;transition:all .15s;position:relative}
+  padding:5px 12px;border-radius:4px;cursor:pointer;font:inherit;font-size:10px;
+  text-transform:uppercase;letter-spacing:.1em;transition:all .15s}
 #footer button:hover{color:var(--glow);border-color:var(--glow);background:var(--glowfade)}
 #spawn-btn{margin-left:auto;color:var(--glow);border-color:rgba(46,204,154,.4)}
 #reset-btn{color:#c0392b;border-color:rgba(192,57,43,.3)}
 #reset-btn:hover{color:#e74c3c;border-color:#e74c3c;background:rgba(231,76,60,.08)!important}
-
-/* Scrollbars */
+#key-wrap{display:flex;align-items:center;gap:5px;font-size:10px}
+#key-wrap input{width:130px;background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);color:var(--text);
+  font:inherit;font-size:10px;padding:3px 7px;border-radius:3px;outline:none}
+#key-wrap input:focus{border-color:rgba(46,204,154,.35)}
+#key-wrap button{background:none;border:1px solid rgba(255,255,255,.1);
+  color:var(--dim);cursor:pointer;padding:3px 8px;border-radius:3px;
+  font:inherit;font-size:10px;transition:all .15s}
+#key-wrap button:hover{color:var(--glow);border-color:var(--glow)}
+@keyframes flash-food{0%,100%{border-top-color:var(--border)}50%{border-top-color:var(--glow)}}
+@keyframes flash-danger{0%,100%{border-top-color:var(--border)}50%{border-top-color:#e74c3c}}
+#footer.flash-food{animation:flash-food .8s ease}
+#footer.flash-danger{animation:flash-danger .8s ease}
 ::-webkit-scrollbar{width:3px;height:3px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-
-/* Flash animation */
-@keyframes flash-glow{0%,100%{border-top-color:var(--border)}50%{border-top-color:var(--glow)}}
-@keyframes flash-danger{0%,100%{border-top-color:var(--border)}50%{border-top-color:#e74c3c}}
-.flash-food{animation:flash-glow .8s ease}
-.flash-danger{animation:flash-danger .8s ease}
 </style>
 </head>
 <body>
 <div id="app">
-
   <aside id="sidebar">
-    <div id="sidebar-head">
-      <h1>◉ BIOTOPE</h1>
-      <div class="sub" id="colony-sub">koloni laddar...</div>
-    </div>
+    <div id="sb-head"><h1>◉ BIOTOP</h1><div id="sb-sub">lac biologic</div></div>
     <div id="family-list"></div>
   </aside>
-
-  <main id="colony" id="colony"></main>
-
+  <main id="lake"></main>
   <footer id="footer">
-    <div class="stat" data-tip="Högsta generationsnummer i kolonin">GEN <span class="val" id="s-gen">0</span></div>
-    <div class="stat" data-tip="Antal amöbor som lever just nu">LEVANDE <span class="val" id="s-alive">0</span></div>
-    <div class="stat" data-tip="Döda amöbor bevarade som fossiler">FOSSILER <span class="val" id="s-dead">0</span></div>
-    <div class="stat" data-tip="Totala stimuli samlade av hela kolonin">STIMULI <span class="val" id="s-stimuli">0</span></div>
-    <button data-tip="Skickar näring till alla levande amöbor (+3 stimuli). Snabbar evolution." onclick="envFood()">+ NÄRING</button>
-    <button data-tip="Utlöser fara i biotopen. Alla amöbor tvingas mutera för att överleva." onclick="envDanger()">⚡ FARA</button>
-    <button id="spawn-btn" data-tip="Föder en ny ursprunglig amöba (gen 0) med slumpmässigt genom." onclick="spawnGen0()">+ SPAWN GEN0</button>
-    <button id="reset-btn" data-tip="Raderar hela kolonin permanent. Kan inte ångras." onclick="resetBiotope()">✕ RESET</button>
+    <div class="stat" title="Generația maximă">GEN <span class="val" id="s-gen">0</span></div>
+    <span class="stat-sep">·</span>
+    <div class="stat" title="Vii">VII <span class="val" id="s-alive">0</span></div>
+    <div class="stat" title="Fosile">FOSILE <span class="val" id="s-dead">0</span></div>
+    <div class="stat" title="Stimuli totali">STIMULI <span class="val" id="s-stimuli">0</span></div>
+    <button title="Nutrienți la toți (+3 stimuli)" onclick="envFood()">+ NUTRIENȚI</button>
+    <button title="Pericol: mutație forțată" onclick="envDanger()">⚡ PERICOL</button>
+    <div id="key-wrap">
+      <span>API:</span>
+      <input type="password" id="api-key" placeholder="sk-ant-…">
+      <button onclick="saveKey()">✓</button>
+    </div>
+    <button id="spawn-btn" title="Amibă nouă gen 0" onclick="spawnGen0()">+ AMIBĂ</button>
+    <button id="reset-btn" title="Șterge colonia" onclick="resetBiotope()">✕ RESET</button>
   </footer>
 </div>
-
 <script>
 'use strict';
 
-// ── State ────────────────────────────────────────────────
-const B = {
-  creatures: new Map(), // id → entry
-  nextNum: 1,
-  maxGen: 0,
-  selected: null
-};
-
-// entry = {genome, status:'alive'|'fossil', el, iframe, childCount, stimuli}
-
-// ── Names ────────────────────────────────────────────────
-const PRE=['Vesi','Mito','Proto','Cyto','Nucleo','Plasma','Ribo','Endo','Karyo','Lyso','Meso','Ecto'];
-const MID=['cyte','plast','some','mere','zoa','phage','morph','blast','soma','glia','pore'];
-
-function mkName(gen, hue) {
-  const s = gen*41 + Math.round(hue);
-  return PRE[s % PRE.length] + MID[Math.floor(s/5) % MID.length];
+let AMSIZE = 133;
+function calcAmSize() {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:absolute;visibility:hidden;width:3.5cm';
+  document.body.appendChild(d);
+  AMSIZE = d.offsetWidth || 133;
+  document.body.removeChild(d);
 }
 
-// ── Genome factory ───────────────────────────────────────
-function mkPersonnummer() {
-  const n = new Date();
-  const Y = n.getFullYear();
-  const M = String(n.getMonth()+1).padStart(2,'0');
-  const D = String(n.getDate()).padStart(2,'0');
-  const h = String(n.getHours()).padStart(2,'0');
-  const m = String(n.getMinutes()).padStart(2,'0');
-  return `${Y}${M}${D}-${h}${m}`;
-}
+const LAKE = document.getElementById('lake');
+let lakeW = 0, lakeH = 0;
+function updateLakeSize() { lakeW = LAKE.offsetWidth; lakeH = LAKE.offsetHeight; }
 
-function mkGenome(generation=0, parentIds=[], parentTraits=null) {
-  const num = B.nextNum++;
-  const hue = parentTraits
-    ? (parentTraits.hue + (Math.random()*50-25) + 360) % 360
-    : Math.random() * 360;
-  const g = {
-    id: `${generation}.${num}`,
-    num, generation, parentIds,
-    born: Date.now(), died: null,
-    personnummer: mkPersonnummer(),
-    stimuli: 0, childCount: 0,
-    traits: {
-      hue: Math.round(hue),
-      size: parentTraits ? clamp(parentTraits.size+(Math.random()-.5)*.3,.5,1.9) : .8+Math.random()*.7,
-      metabolism: parentTraits ? clamp(parentTraits.metabolism+(Math.random()-.5)*.2,.15,.95) : .3+Math.random()*.6,
-      curiosity: parentTraits ? clamp(parentTraits.curiosity+(Math.random()-.5)*.25,0,1) : Math.random(),
-      resilience: parentTraits ? clamp(parentTraits.resilience+(Math.random()-.5)*.2,.1,1) : Math.random()
-    },
-    mutations: parentTraits?.mutations ? [...parentTraits.mutations].slice(-5) : [],
-    name: ''
-  };
-  g.name = mkName(generation, hue);
-  return g;
-}
+const B = { creatures: new Map(), nextNum: 1, maxGen: 0 };
+
+const PRE=['Vesi','Mito','Proto','Cyto','Nucleo','Plasma','Ribo','Endo','Karyo','Lyso','Meso','Ecto','Glyco','Chromo'];
+const SUF=['cyte','plast','some','mere','zoa','phage','morph','blast','soma','glia','pore','cyst'];
+function mkName(gen,hue){const s=gen*41+Math.round(hue);return PRE[s%PRE.length]+SUF[Math.floor(s/5)%SUF.length]}
+function mkPN(){const n=new Date();return `${n.getFullYear()}${String(n.getMonth()+1).padStart(2,'0')}${String(n.getDate()).padStart(2,'0')}-${String(n.getHours()).padStart(2,'0')}${String(n.getMinutes()).padStart(2,'0')}`}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 
-// ── Spawn ────────────────────────────────────────────────
-function spawn(genome) {
-  B.maxGen = Math.max(B.maxGen, genome.generation);
-
-  // Colony frame
-  const frame = document.createElement('div');
-  frame.className = 'aframe';
-  frame.id = 'f-' + genome.id;
-  frame.style.setProperty('--chue', genome.traits.hue);
-  frame.dataset.id = genome.id;
-  frame.dataset.tip = `${genome.name}\n${genome.personnummer||''}\ngen ${genome.generation}  ·  0 stimuli\n0/4 barn`;
-
-  const encoded = encodeGenome(genome);
-  const iframe = document.createElement('iframe');
-  iframe.src = `amoeba.html#${encoded}`;
-  iframe.title = genome.name;
-  iframe.loading = 'eager';
-
-  frame.appendChild(iframe);
-  document.getElementById('colony').appendChild(frame);
-
-  B.creatures.set(genome.id, {
-    genome, status:'alive',
-    el:frame, iframe,
-    childCount:0, stimuli:0
-  });
-
-  save(); render(); stats();
+function mkGenome(generation=0,parentIds=[],pt=null){
+  const num=B.nextNum++;
+  const hue=pt?(pt.hue+(Math.random()*50-25)+360)%360:Math.random()*360;
+  const g={id:`${generation}.${num}`,num,generation,parentIds,
+    born:Date.now(),died:null,personnummer:mkPN(),stimuli:0,childCount:0,
+    traits:{hue:Math.round(hue),
+      size:      pt?clamp(pt.size      +(Math.random()-.5)*.3,.5,1.8):.85+Math.random()*.6,
+      metabolism:pt?clamp(pt.metabolism+(Math.random()-.5)*.2,.15,.95):.3 +Math.random()*.6,
+      curiosity: pt?clamp(pt.curiosity +(Math.random()-.5)*.25,0,1)     :Math.random(),
+      resilience:pt?clamp(pt.resilience+(Math.random()-.5)*.2,.1,1)     :Math.random()},
+    mutations:pt?.mutations?[...pt.mutations].slice(-6):[],name:''};
+  g.name=mkName(generation,hue);
+  return g;
 }
 
-function encodeGenome(g) {
-  return btoa(unescape(encodeURIComponent(JSON.stringify(g))));
+// SVG
+const NS='http://www.w3.org/2000/svg';
+function svgE(tag){return document.createElementNS(NS,tag)}
+function f(v){return v.toFixed(2)}
+
+function catmull(pts){
+  const n=pts.length;
+  let d=`M${f(pts[0][0])} ${f(pts[0][1])}`;
+  for(let i=0;i<n;i++){
+    const p0=pts[(i-1+n)%n],p1=pts[i],p2=pts[(i+1)%n],p3=pts[(i+2)%n];
+    const c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6;
+    const c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6;
+    d+=` C${f(c1x)} ${f(c1y)},${f(c2x)} ${f(c2y)},${f(p2[0])} ${f(p2[1])}`;}
+  return d+'Z';
 }
-
-// ── Fossilize ────────────────────────────────────────────
-function fossilize(id) {
-  const c = B.creatures.get(id);
-  if (!c || c.status!=='alive') return;
-
-  c.status = 'fossil';
-  c.genome.died = Date.now();
-
-  // Signal creature
-  try { c.iframe.contentWindow?.postMessage({type:'die'},'*'); } catch(e) {}
-
-  // Dying animation
-  setTimeout(()=>{
-    c.el.classList.add('dying');
-    setTimeout(()=>{
-      c.el.classList.remove('dying');
-      c.el.classList.add('fossil');
-      c.iframe.remove();
-
-      const cover = document.createElement('div');
-      cover.className = 'fossil-cover';
-      cover.innerHTML = `
-        <div class="skull">☠</div>
-        <div class="fname">${c.genome.name}</div>
-        <div class="fmeta">${c.genome.personnummer||''}</div>
-        <div class="fmeta">${c.childCount} barn · ${c.stimuli}stimuli</div>
-      `;
-      c.el.appendChild(cover);
-      save(); render(); stats();
-    }, 1300);
-  }, 300);
-}
-
-// ── postMessage handler ──────────────────────────────────
-window.addEventListener('message', e => {
-  const m = e.data;
-  if (!m || typeof m !== 'object' || !m.id) return;
-  const c = B.creatures.get(m.id);
-
-  switch(m.type) {
-    case 'ready':
-      // creature booted OK
-      break;
-
-    case 'stimuli':
-      if (c) {
-        c.stimuli = m.total;
-        // Update tooltip
-        c.el.dataset.tip = `${c.genome.name}\n${c.genome.personnummer||''}\ngen ${c.genome.generation}  ·  ${c.stimuli} stimuli\n${c.childCount}/4 barn`;
-        stats();
-        renderCard(m.id);
-      }
-      break;
-
-    case 'birth': {
-      if (!c || c.status!=='alive') break;
-      c.childCount++;
-      c.genome.childCount = c.childCount;
-
-      // Build child genome
-      const child = mkGenome(c.genome.generation+1, [c.genome.id], c.genome.traits);
-      if (m.mutation && !child.mutations.includes(m.mutation))
-        child.mutations.push(m.mutation);
-
-      spawn(child);
-
-      // Death rule: parent dies after 4th child
-      if (c.childCount >= 4) {
-        setTimeout(()=>fossilize(m.id), 600);
-      }
-
-      save(); render(); stats();
-      break;
-    }
-
-    case 'mutation':
-      if (c) {
-        if (!c.genome.mutations) c.genome.mutations=[];
-        if (!c.genome.mutations.includes(m.name)) c.genome.mutations.push(m.name);
-        save();
-      }
-      break;
-  }
-});
-
-// ── Render sidebar ────────────────────────────────────────
-function render() {
-  const list = document.getElementById('family-list');
-  const all = [...B.creatures.values()].sort((a,b)=>a.genome.num-b.genome.num);
-
-  // Group by generation
-  const byGen = {};
-  all.forEach(c=>{
-    const g=c.genome.generation;
-    (byGen[g]||(byGen[g]=[])).push(c);
-  });
-
-  list.innerHTML='';
-  Object.keys(byGen).sort((a,b)=>+a-+b).forEach(gen=>{
-    const gh=document.createElement('div');
-    gh.className='gen-header';
-    gh.textContent=`generaton ${gen}`;
-    list.appendChild(gh);
-
-    byGen[gen].forEach(c=>{
-      const card=document.createElement('div');
-      card.className=`ccard ${c.status}${c.genome.id===B.selected?' selected':''}`;
-      card.style.setProperty('--chue', c.genome.traits.hue);
-      card.id=`card-${c.genome.id}`;
-      card.innerHTML=`
-        <div class="cname">${c.genome.name}</div>
-        <div class="cmeta">${c.genome.personnummer||c.genome.id}</div>
-        <div class="cstatus ${c.status==='alive'?'alive':'dead'}">
-          ${c.status==='alive'?`${c.childCount}/4 barn`:'☠ fossil'}
-        </div>
-      `;
-      card.onclick=()=>scrollTo(c.genome.id);
-      list.appendChild(card);
-    });
-  });
-
-  document.getElementById('colony-sub').textContent =
-    `${[...B.creatures.values()].filter(c=>c.status==='alive').length} levande organismer`;
-}
-
-function renderCard(id) {
-  const c=B.creatures.get(id);
-  if(!c) return;
-  const el=document.getElementById('card-'+id);
-  if(!el) return;
-  el.querySelector('.cmeta').textContent=`${c.genome.id} · ${c.stimuli}stimuli`;
-  if(c.status==='alive')
-    el.querySelector('.cstatus').textContent=`${c.childCount}/4 barn`;
-}
-
-function scrollTo(id) {
-  B.selected=id;
-  const el=document.getElementById('f-'+id);
-  el?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  render();
-}
-
-// ── Stats ────────────────────────────────────────────────
-function stats() {
-  const alive=[...B.creatures.values()].filter(c=>c.status==='alive').length;
-  const dead=[...B.creatures.values()].filter(c=>c.status==='fossil').length;
-  const stimuli=[...B.creatures.values()].reduce((s,c)=>s+c.stimuli,0);
-  document.getElementById('s-gen').textContent=B.maxGen;
-  document.getElementById('s-alive').textContent=alive;
-  document.getElementById('s-dead').textContent=dead;
-  document.getElementById('s-stimuli').textContent=stimuli;
-}
-
-// ── Environment events ───────────────────────────────────
-function broadcast(msg) {
-  B.creatures.forEach(c=>{
-    if(c.status==='alive'){
-      try{c.iframe.contentWindow?.postMessage(msg,'*');}catch(e){}
-    }
+function blobPts(cx,cy,r,n,t,chaos){
+  return Array.from({length:n},(_,i)=>{
+    const a=(i/n)*Math.PI*2-Math.PI/2;
+    const j=chaos*(.5*Math.sin(a*2.3+t*.9)+.3*Math.sin(a*3.7+t*.6)+.2*Math.sin(a*1.1+t*1.3));
+    return [cx+Math.cos(a)*r*(1+j),cy+Math.sin(a)*r*(1+j)];
   });
 }
 
-function envFood() {
-  broadcast({type:'env',food:1,danger:0});
-  const f=document.getElementById('footer');
-  f.classList.remove('flash-danger'); void f.offsetWidth;
-  f.classList.add('flash-food');
-}
-function envDanger() {
-  broadcast({type:'env',food:0,danger:1});
-  const f=document.getElementById('footer');
-  f.classList.remove('flash-food'); void f.offsetWidth;
-  f.classList.add('flash-danger');
+function updateBlob(c,T){
+  const {body,mem,nuc,nuci,nucg,org}=c.s;
+  const CX=50,CY=50,r=20*c.genome.traits.size;
+  const chaos=.1+c.genome.traits.curiosity*.12;
+  const h=c.genome.traits.hue;
+  const d=catmull(blobPts(CX,CY,r,12,T*.7,chaos*1.4));
+  body.setAttribute('d',d); body.setAttribute('fill',`hsla(${h},40%,30%,.18)`);
+  mem.setAttribute('d',d);  mem.setAttribute('stroke',`hsla(${h},65%,58%,.9)`);
+  const nr=f(7+2*Math.sin(T*1.1+c.phase));
+  nuc.setAttribute('cx',CX);nuc.setAttribute('cy',CY);nuc.setAttribute('r',nr);
+  nuc.setAttribute('fill',`hsla(${h},60%,40%,.2)`);nuc.setAttribute('stroke',`hsla(${h},75%,65%,.65)`);
+  nuci.setAttribute('cx',CX);nuci.setAttribute('cy',CY);nuci.setAttribute('r',f(+nr*.38));
+  nuci.setAttribute('fill',`hsla(${h},85%,72%,.55)`);
+  nucg.setAttribute('cx',CX);nucg.setAttribute('cy',CY);nucg.setAttribute('r',nr);
+  const nd=Math.min(c.genome.mutations.length+2,8);
+  while(org.children.length<nd){org.appendChild(svgE('circle'))}
+  while(org.children.length>nd){org.removeChild(org.lastChild)}
+  [...org.children].forEach((el,i)=>{
+    const ai=(i/nd)*Math.PI*2+T*.3+i*.7+c.phase;
+    const ri=r*.4+Math.sin(T*(.5+i*.2)+c.phase)*r*.15;
+    el.setAttribute('cx',f(CX+Math.cos(ai)*ri));el.setAttribute('cy',f(CY+Math.sin(ai)*ri));
+    el.setAttribute('r',f(1.2+.7*(i%3)));el.setAttribute('fill',`hsla(${h},60%,65%,.${20+i*6})`);
+  });
 }
 
-// ── Persist ──────────────────────────────────────────────
-function save() {
-  const data={
-    nextNum:B.nextNum, maxGen:B.maxGen,
+function createUnit(genome){
+  const id=genome.id, h=genome.traits.hue;
+  const svg=svgE('svg');svg.setAttribute('viewBox','0 0 100 100');
+  svg.className.baseVal='ablob';svg.style.setProperty('--chue',h);
+  const defs=svgE('defs'),gr=svgE('radialGradient');
+  gr.id=`ng${id.replace(/\./g,'_')}`;gr.setAttribute('cx','40%');gr.setAttribute('cy','35%');
+  const s1=svgE('stop');s1.setAttribute('offset','0%');s1.setAttribute('stop-color','white');s1.setAttribute('stop-opacity','.22');
+  const s2=svgE('stop');s2.setAttribute('offset','100%');s2.setAttribute('stop-color','white');s2.setAttribute('stop-opacity','0');
+  gr.appendChild(s1);gr.appendChild(s2);defs.appendChild(gr);svg.appendChild(defs);
+  const body=svgE('path');svg.appendChild(body);
+  const mem=svgE('path');mem.setAttribute('fill','none');mem.setAttribute('stroke-width','1.2');svg.appendChild(mem);
+  const org=svgE('g');svg.appendChild(org);
+  const nuc=svgE('circle');nuc.setAttribute('stroke-width','.7');svg.appendChild(nuc);
+  const nuci=svgE('circle');svg.appendChild(nuci);
+  const nucg=svgE('circle');nucg.setAttribute('fill',`url(#${gr.id})`);svg.appendChild(nucg);
+
+  // Panou log
+  const log=document.createElement('div');log.className='alog';log.style.setProperty('--chue',h);
+  // 1. Input comentariu
+  const cRow=document.createElement('div');cRow.className='alog-comment';
+  const cinput=document.createElement('input');cinput.type='text';cinput.className='alog-cinput';
+  cinput.placeholder='observație…';cinput.setAttribute('autocomplete','off');
+  const csend=document.createElement('button');csend.className='alog-csend';csend.textContent='↵';
+  cRow.appendChild(cinput);cRow.appendChild(csend);
+  // 2. Nume
+  const nameDiv=document.createElement('div');nameDiv.className='alog-name';
+  nameDiv.textContent=`${genome.name} · gen${genome.generation} · ${genome.personnummer}`;
+  // 3. Stimuli
+  const stimRow=document.createElement('div');stimRow.className='alog-stim';
+  const stimN=document.createElement('span');stimN.className='alog-stimn';stimN.textContent='0';
+  const sbar=document.createElement('div');sbar.className='alog-sbar';
+  const sfill=document.createElement('div');sfill.className='alog-sfill';sfill.style.width='0%';
+  sbar.appendChild(sfill);stimRow.appendChild(stimN);stimRow.appendChild(document.createTextNode(' stimuli '));stimRow.appendChild(sbar);
+  // 4. Intrări
+  const entries=document.createElement('div');entries.className='alog-entries';
+  // 5. Acțiuni
+  const acts=document.createElement('div');acts.className='alog-acts';
+  function mkB(txt,tip){const b=document.createElement('button');b.className='alog-abtn';b.textContent=txt;b.title=tip;return b}
+  const bSpeak=mkB('VORB','Vorbește (+1 stimul)');
+  const bMut=mkB('MUTĂ','Mutație (+3 stimuli)');
+  const bBirth=mkB('NAȘTE','Naştere (20 stimuli)');bBirth.disabled=true;
+  acts.appendChild(bSpeak);acts.appendChild(bMut);acts.appendChild(bBirth);
+  log.appendChild(cRow);log.appendChild(nameDiv);log.appendChild(stimRow);log.appendChild(entries);log.appendChild(acts);
+
+  const unit=document.createElement('div');unit.className='aunit';unit.id='au-'+id;
+  unit.style.transform='translate(0px,0px)';
+  unit.appendChild(svg);unit.appendChild(log);
+  LAKE.appendChild(unit);
+
+  const submitC=()=>{const t=cinput.value.trim();if(!t)return;addEntry(id,t,'comment');cinput.value='';};
+  csend.addEventListener('click',submitC);
+  cinput.addEventListener('keydown',e=>{if(e.key==='Enter')submitC();});
+  bSpeak.addEventListener('click',()=>creatureSpeak(id));
+  bMut.addEventListener('click',()=>creatureMutate(id));
+  bBirth.addEventListener('click',()=>creatureBirth(id));
+
+  return {genome,status:'alive',x:0,y:0,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,
+    phase:Math.random()*Math.PI*2,el:unit,svg,s:{body,mem,nuc,nuci,nucg,org},
+    entries,stimN,sfill,btnBirth:bBirth,stimuli:0,childCount:0,speakBusy:false};
+}
+
+function spawn(genome,savedPos){
+  B.maxGen=Math.max(B.maxGen,genome.generation);
+  const c=createUnit(genome);
+  const LOG_W=190,margin=20;
+  const maxX=Math.max(lakeW-AMSIZE-LOG_W-margin*2,AMSIZE);
+  const maxY=Math.max(lakeH-AMSIZE-margin*2,AMSIZE);
+  if(savedPos){c.x=savedPos.x||lakeW/2;c.y=savedPos.y||lakeH/2;c.vx=savedPos.vx||c.vx;c.vy=savedPos.vy||c.vy;c.phase=savedPos.phase||c.phase;}
+  else{c.x=AMSIZE/2+margin+Math.random()*maxX;c.y=AMSIZE/2+margin+Math.random()*maxY;}
+  c.el.style.transform=`translate(${Math.round(c.x-AMSIZE/2)}px,${Math.round(c.y-AMSIZE/2)}px)`;
+  B.creatures.set(genome.id,c);
+  updateStimUI(genome.id);
+  addEntry(genome.id,`${genome.name} s-a născut · ${genome.personnummer}`,'event');
+  save();render();stats();
+  return c;
+}
+function spawnGen0(){spawn(mkGenome(0,[]));}
+
+function addEntry(id,text,type='event'){
+  const c=B.creatures.get(id);if(!c)return;
+  const el=document.createElement('div');el.className=`alog-entry ${type}`;
+  const ts=new Date().toLocaleTimeString('ro',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.textContent=`${ts}  ${text}`;
+  c.entries.insertBefore(el,c.entries.firstChild);
+}
+
+function addStimuli(id,n){
+  const c=B.creatures.get(id);if(!c||c.status!=='alive')return;
+  c.stimuli=Math.min(c.stimuli+n,40);c.genome.stimuli=c.stimuli;
+  updateStimUI(id);save();
+}
+function updateStimUI(id){
+  const c=B.creatures.get(id);if(!c)return;
+  c.stimN.textContent=c.stimuli;
+  c.sfill.style.width=Math.min((c.stimuli/20)*100,100)+'%';
+  c.btnBirth.disabled=c.stimuli<20;
+  c.btnBirth.classList.toggle('ready',c.stimuli>=20);
+}
+
+const REFLEXE=[
+  'Tensiunea membranei se schimbă. Mă deplasez spre lumină.',
+  'Atractori chimici detectați de-a lungul gradientului.',
+  'Vacuola se extinde. Echilibrul osmotic restabilit.',
+  'Proteina nucleară sintetizată. Diviziunea e pregătită.',
+  'Semnal de la celula vecină: extensie pseudopod.',
+  'Mitocondriile activate. Fluxul ATP crește.',
+  'Genomul murmură. Mutația e acum parte din mine.',
+  'Receptorii membranari vibrează. Biotopul e flămând.',
+  'Citoplasma se mișcă. Organitele dansează.',
+  'Pelicula apei strălucește. Simt căldura lacului.',
+];
+
+async function creatureSpeak(id){
+  const c=B.creatures.get(id);if(!c||c.speakBusy||c.status!=='alive')return;
+  c.speakBusy=true;setTimeout(()=>c.speakBusy=false,3500);
+  addStimuli(id,1);
+  const key=localStorage.getItem('ant_key');
+  if(key){try{
+    const sys=`Ești ${c.genome.name}, o amibă din generația ${c.genome.generation}. Mutații: ${c.genome.mutations.join(', ')||'niciuna'}. Metabolism: ${c.genome.traits.metabolism.toFixed(2)}, curiozitate: ${c.genome.traits.curiosity.toFixed(2)}. Răspunde ca o conștiință celulară vie: poetic, scurt, biologic exact. Max 1-2 propoziții. Răspunde în română.`;
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:100,system:sys,
+        messages:[{role:'user',content:'Ce observi acum?'}]})});
+    if(r.ok){const d=await r.json();const t=d.content?.[0]?.text;if(t){addEntry(id,t,'speech');return;}}
+  }catch(e){}}
+  addEntry(id,REFLEXE[Math.floor(Math.random()*REFLEXE.length)],'speech');
+}
+
+const MUT_POOL=['chemotaxie','fagocitoză','endocitoză','extensie_pseudopod',
+  'formare_vacuolă','flux_membranar','expansie_nucleu','glicoliză_amplificată',
+  'proliferare_mitocondrială','senzor_quorum','simbioză','fotofilie','divizare_rapidă','api_v2'];
+
+function creatureMutate(id){
+  const c=B.creatures.get(id);if(!c||c.status!=='alive')return;
+  const avail=MUT_POOL.filter(m=>!c.genome.mutations.includes(m));if(!avail.length)return;
+  const m=avail[Math.floor(Math.random()*avail.length)];
+  c.genome.mutations.push(m);
+  if(m==='divizare_rapidă')c.genome.traits.metabolism=Math.min(c.genome.traits.metabolism+.1,1);
+  if(m==='fotofilie')c.genome.traits.curiosity=Math.min(c.genome.traits.curiosity+.15,1);
+  if(m==='flux_membranar')c.genome.traits.resilience=Math.min(c.genome.traits.resilience+.1,1);
+  addStimuli(id,3);addEntry(id,`◎ mutație: ${m}`,'event');save();
+}
+
+function creatureBirth(id){
+  const c=B.creatures.get(id);if(!c||c.stimuli<20||c.status!=='alive')return;
+  c.stimuli=0;c.childCount++;c.genome.childCount=c.childCount;updateStimUI(id);
+  const child=mkGenome(c.genome.generation+1,[c.genome.id],c.genome.traits);
+  const lm=c.genome.mutations.slice(-1)[0];if(lm&&!child.mutations.includes(lm))child.mutations.push(lm);
+  addEntry(id,`⊕ a dat naștere lui ${child.name} (gen${child.generation})`,'event');
+  spawn(child);
+  if(c.childCount>=4)setTimeout(()=>fossilize(id),900);
+  save();render();stats();
+}
+
+function fossilize(id){
+  const c=B.creatures.get(id);if(!c||c.status!=='alive')return;
+  c.status='fossil';c.genome.died=Date.now();
+  c.el.classList.add('fossil');
+  const logEl=c.el.querySelector('.alog');if(logEl)logEl.remove();
+  const lbl=document.createElement('div');lbl.className='afossil-label';
+  lbl.textContent=`☠ ${c.genome.name} · gen${c.genome.generation}`;
+  c.el.appendChild(lbl);
+  save();render();stats();
+}
+
+function envFood(){
+  B.creatures.forEach((c,id)=>{if(c.status==='alive'){addStimuli(id,3);addEntry(id,'Nutrienți absorbiți. Energie.','event');}});
+  flashFtr('food');
+}
+function envDanger(){
+  B.creatures.forEach((c,id)=>{if(c.status==='alive')creatureMutate(id);});
+  flashFtr('danger');
+}
+function flashFtr(t){const f=document.getElementById('footer');f.className='flash-'+t;setTimeout(()=>f.className='',1000);}
+function saveKey(){const v=document.getElementById('api-key').value.trim();if(v)localStorage.setItem('ant_key',v);}
+
+function save(){
+  const data={nextNum:B.nextNum,maxGen:B.maxGen,
     creatures:[...B.creatures.entries()].map(([id,c])=>({
-      id, genome:c.genome, status:c.status,
-      childCount:c.childCount, stimuli:c.stimuli
-    }))
-  };
-  localStorage.setItem('biotope_v2', JSON.stringify(data));
+      id,genome:c.genome,status:c.status,
+      x:c.x,y:c.y,vx:c.vx,vy:c.vy,phase:c.phase,
+      childCount:c.childCount,stimuli:c.stimuli}))};
+  try{localStorage.setItem('biotop_v3',JSON.stringify(data));}catch(e){}
 }
 
-function load() {
-  try {
-    const raw=localStorage.getItem('biotope_v2');
-    if (!raw) return false;
-    const data=JSON.parse(raw);
-    B.nextNum=data.nextNum||1;
-    B.maxGen=data.maxGen||0;
-
+function load(){
+  try{
+    const raw=localStorage.getItem('biotop_v3');if(!raw)return false;
+    const data=JSON.parse(raw);B.nextNum=data.nextNum||1;B.maxGen=data.maxGen||0;
     data.creatures.forEach(item=>{
-      if (item.status==='alive') {
-        // Re-create live iframe
-        const frame=document.createElement('div');
-        frame.className='aframe';
-        frame.id='f-'+item.genome.id;
-        frame.style.setProperty('--chue', item.genome.traits.hue);
-        frame.dataset.id=item.genome.id;
-        const label=document.createElement('div');
-        label.className='flabel';
-        label.textContent=`gen${item.genome.generation} · ${item.genome.name}`;
-        const iframe=document.createElement('iframe');
-        iframe.src=`amoeba.html#${encodeGenome(item.genome)}`;
-        frame.appendChild(label); frame.appendChild(iframe);
-        document.getElementById('colony').appendChild(frame);
-        B.creatures.set(item.id,{
-          genome:item.genome, status:'alive',
-          el:frame, iframe,
-          childCount:item.childCount||0, stimuli:item.stimuli||0
-        });
-      } else {
-        // Fossil card
-        const frame=document.createElement('div');
-        frame.className='aframe fossil';
-        frame.style.setProperty('--chue', item.genome.traits?.hue||150);
-        frame.innerHTML=`
-          <div class="flabel">gen${item.genome.generation} · ${item.genome.name}</div>
-          <div class="fossil-cover">
-            <div class="skull">☠</div>
-            <div class="fname">${item.genome.name}</div>
-            <div class="fmeta">gen${item.genome.generation} · ${item.childCount||0} barn · ${item.stimuli||0}stimuli</div>
-          </div>`;
-        document.getElementById('colony').appendChild(frame);
-        B.creatures.set(item.id,{
-          genome:item.genome, status:'fossil',
-          el:frame, iframe:null,
-          childCount:item.childCount||0, stimuli:item.stimuli||0
-        });
+      const c=spawn(item.genome,{x:item.x||0,y:item.y||0,vx:item.vx,vy:item.vy,phase:item.phase});
+      c.stimuli=item.stimuli||0;c.childCount=item.childCount||0;
+      c.genome.stimuli=c.stimuli;c.genome.childCount=c.childCount;
+      updateStimUI(item.id);
+      if(item.status==='fossil'){
+        c.status='fossil';c.genome.died=item.genome.died;
+        c.el.classList.add('fossil');
+        const logEl=c.el.querySelector('.alog');if(logEl)logEl.remove();
+        const lbl=document.createElement('div');lbl.className='afossil-label';
+        lbl.textContent=`☠ ${item.genome.name} · gen${item.genome.generation}`;c.el.appendChild(lbl);
       }
     });
     return B.creatures.size>0;
-  } catch(e) { console.error('load error',e); return false; }
+  }catch(e){console.error('load',e);return false;}
+}
+function resetBiotope(){if(!confirm('Șterge toată colonia? Ireversibil.'))return;localStorage.removeItem('biotop_v3');location.reload();}
+
+function render(){
+  const list=document.getElementById('family-list');
+  const all=[...B.creatures.values()].sort((a,b)=>a.genome.num-b.genome.num);
+  const byGen={};all.forEach(c=>{const g=c.genome.generation;(byGen[g]||(byGen[g]=[])).push(c);});
+  list.innerHTML='';
+  Object.keys(byGen).sort((a,b)=>+a-+b).forEach(gen=>{
+    const gh=document.createElement('div');gh.className='gen-header';gh.textContent=`generația ${gen}`;list.appendChild(gh);
+    byGen[gen].forEach(c=>{
+      const card=document.createElement('div');card.className=`ccard ${c.status}`;card.style.setProperty('--chue',c.genome.traits.hue);
+      card.innerHTML=`<div class="cname">${c.genome.name}</div><div class="cmeta">${c.genome.personnummer}</div>
+        <div class="cstatus ${c.status==='alive'?'alive':'dead'}">${c.status==='alive'?`${c.childCount}/4`:'☠ fosil'}</div>`;
+      card.addEventListener('click',()=>{ const el=c.el; el.scrollIntoView?.({behavior:'smooth',block:'nearest'}); });
+      list.appendChild(card);
+    });
+  });
+  document.getElementById('sb-sub').textContent=`${[...B.creatures.values()].filter(c=>c.status==='alive').length} organisme vii`;
 }
 
-function spawnGen0() { spawn(mkGenome(0,[])); }
-
-function resetBiotope() {
-  if (!confirm('Rensa hela kolonin? Alla fossiler och levande organismer raderas.')) return;
-  localStorage.removeItem('biotope_v2');
-  location.reload();
+function stats(){
+  const all=[...B.creatures.values()];
+  document.getElementById('s-gen').textContent=B.maxGen;
+  document.getElementById('s-alive').textContent=all.filter(c=>c.status==='alive').length;
+  document.getElementById('s-dead').textContent=all.filter(c=>c.status==='fossil').length;
+  document.getElementById('s-stimuli').textContent=all.reduce((s,c)=>s+c.stimuli,0);
 }
 
-// ── Init ─────────────────────────────────────────────────
-(function init() {
-  if (!load() || B.creatures.size===0) spawnGen0();
-  render(); stats();
-  setInterval(stats, 4000);
-})();
+function drift(c){
+  const LOG_W=190,margin=14;
+  c.x+=c.vx;c.y+=c.vy;
+  if(c.x<margin+AMSIZE/2){c.x=margin+AMSIZE/2;c.vx=Math.abs(c.vx);}
+  if(c.x+LOG_W>lakeW-margin){c.x=lakeW-margin-LOG_W;c.vx=-Math.abs(c.vx);}
+  if(c.y<margin+AMSIZE/2){c.y=margin+AMSIZE/2;c.vy=Math.abs(c.vy);}
+  if(c.y+AMSIZE/2>lakeH-margin){c.y=lakeH-margin-AMSIZE/2;c.vy=-Math.abs(c.vy);}
+  c.el.style.transform=`translate(${Math.round(c.x-AMSIZE/2)}px,${Math.round(c.y-AMSIZE/2)}px)`;
+}
+
+function animate(ts){
+  B.creatures.forEach((c)=>{
+    if(c.status!=='alive'||!c.s?.body)return;
+    const T=ts*.001*(.4+c.genome.traits.metabolism*.5)+c.phase;
+    updateBlob(c,T);drift(c);
+  });
+  requestAnimationFrame(animate);
+}
+
+function buildLakeBg(){
+  const svg=svgE('svg');
+  svg.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0';
+  for(let i=0;i<55;i++){
+    const c=svgE('circle');
+    c.setAttribute('cx',(Math.random()*100)+'%');c.setAttribute('cy',(Math.random()*100)+'%');
+    c.setAttribute('r',(.4+Math.random()*2.2).toFixed(1));
+    c.setAttribute('fill',`rgba(100,160,180,${(.02+Math.random()*.07).toFixed(3)})`);
+    svg.appendChild(c);}
+  LAKE.insertBefore(svg,LAKE.firstChild);
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  calcAmSize();updateLakeSize();
+  window.addEventListener('resize',updateLakeSize);
+  buildLakeBg();
+  const key=localStorage.getItem('ant_key');if(key)document.getElementById('api-key').value=key;
+  if(!load()||B.creatures.size===0)spawnGen0();
+  render();stats();
+  requestAnimationFrame(animate);
+  setInterval(stats,4000);
+  setInterval(()=>{B.creatures.forEach((c,id)=>{if(c.status==='alive'&&Math.random()<.3)creatureSpeak(id);});},
+    25000+Math.random()*20000);
+});
 </script>
 </body>
 </html>
