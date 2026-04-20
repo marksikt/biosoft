@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BIOTOP — Lac Abeomas</title>
+<title>BIOTOP</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -17,22 +17,33 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   font-family:var(--font);font-size:12px;line-height:1.5}
 #app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:1fr 44px;height:100vh}
 
-/* ── SIDEBAR ────────────────────────────────────────── */
+/* SIDEBAR */
 #sidebar{grid-row:1/2;border-right:1px solid var(--border);
   overflow-y:auto;display:flex;flex-direction:column}
-#sb-head{padding:14px 12px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
-#sb-head h1{font-size:11px;letter-spacing:.18em;color:var(--glow);text-transform:uppercase;font-weight:normal}
-#sb-sub{font-size:10px;color:var(--dim);margin-top:3px}
+#sb-head{padding:12px 12px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
+#sb-title{display:flex;align-items:center;gap:8px}
+#sb-title h1{font-size:11px;letter-spacing:.18em;color:var(--glow);
+  text-transform:uppercase;font-weight:normal;flex:1}
+.save-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .4s}
+.save-dot.unlinked{background:#3a5060}
+.save-dot.linked{background:#2980b9}
+.save-dot.saving{background:#f1c40f;animation:blink .5s ease infinite}
+.save-dot.saved{background:#2ecc71}
+.save-dot.error{background:#e74c3c}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+#save-lbl{font-size:9px;color:var(--dim);letter-spacing:.08em}
+#sb-sub{font-size:10px;color:var(--dim);margin-top:2px}
+#instance-id{font-size:9px;color:#304050;margin-top:1px;font-style:italic}
 #family-list{flex:1;padding:6px 4px;overflow-y:auto;display:flex;flex-direction:column}
 
-/* tree nodes */
+/* tree */
 .tree-row{display:flex;align-items:flex-start;gap:2px;margin-bottom:2px}
 .tree-tog{flex-shrink:0;width:16px;text-align:center;font-size:10px;
-  color:var(--dim);cursor:pointer;padding-top:7px;user-select:none;transition:color .1s}
+  color:var(--dim);cursor:pointer;padding-top:7px;user-select:none}
 .tree-tog:hover{color:var(--glow)}
 .ccard{flex:1;min-width:0;padding:7px 9px 7px 8px;border-radius:5px;
   border:1px solid var(--border);border-left:3px solid transparent;
-  cursor:pointer;transition:background .15s,border-color .2s;position:relative}
+  cursor:pointer;transition:background .15s;position:relative}
 .ccard:hover{background:rgba(255,255,255,.04)}
 .ccard.alive{border-left-color:hsl(var(--chue,150),55%,48%)}
 .ccard.fossil{opacity:.32;pointer-events:none}
@@ -47,7 +58,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .cstatus.alive{color:var(--glow)}
 .cstatus.dead{color:var(--dim)}
 
-/* ── LAC ──────────────────────────────────────────── */
+/* LAC */
 #lake{grid-row:1/2;position:relative;overflow:hidden;
   background:
     radial-gradient(ellipse at 22% 28%, rgba(46,160,120,.05) 0%, transparent 50%),
@@ -57,7 +68,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   background:radial-gradient(ellipse at 50% 50%,transparent 40%,rgba(2,4,6,.55) 100%);
   pointer-events:none;z-index:10}
 
-/* ── UNITATE ABEOMA ───────────────────────────────── */
+/* ABEOMĂ */
 .aunit{position:absolute;left:0;top:0;display:flex;align-items:flex-start;gap:10px;
   animation:appar .5s ease;will-change:transform;z-index:5}
 @keyframes appar{from{opacity:0;transform:scale(.82)}to{opacity:1}}
@@ -66,28 +77,23 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .aunit.selected .ablob{
   filter:drop-shadow(0 0 14px hsla(var(--chue,150),90%,70%,.85))
          drop-shadow(0 0 4px rgba(255,255,255,.5))}
-
-/* blob SVG — 3.5 cm */
 .ablob{width:4.5cm;height:4.5cm;flex-shrink:0;overflow:visible;cursor:pointer;
   filter:drop-shadow(0 0 6px hsla(var(--chue,150),60%,50%,.25))}
 .ablob:not(.aunit.selected .ablob):hover{
   filter:drop-shadow(0 0 10px hsla(var(--chue,150),65%,55%,.55))}
-
 .afossil-label{width:4.5cm;text-align:center;font-size:11px;
   color:var(--dim);margin-top:4px;letter-spacing:.04em}
 
-/* ── PANOU LOG (6 cm lăţime) ─────────────────────── */
+/* LOG PANOU */
 .alog{width:12cm;background:rgba(4,9,14,.92);border:1px solid rgba(255,255,255,.09);
   border-radius:7px;display:none;flex-direction:column;overflow:hidden;
   backdrop-filter:blur(5px);flex-shrink:0;margin-top:2px;
-  max-height:calc(4.5cm + 260px)}
+  max-height:calc(4.5cm + 280px)}
 .aunit.selected .alog{display:flex}
 
-/* mini header tehnic */
 .alog-tech{display:flex;align-items:center;gap:6px;padding:6px 10px;
-  border-bottom:1px solid var(--border);background:rgba(0,0,0,.18);
-  font-size:12px;color:var(--dim)}
-.atb-gen{color:hsl(var(--chue,150),50%,55%);font-weight:bold}
+  border-bottom:1px solid var(--border);background:rgba(0,0,0,.2);font-size:12px}
+.atb-gen{color:hsl(var(--chue,150),50%,58%);font-weight:bold}
 .atb-mut{color:var(--dim)}
 .atb-ai{display:flex;align-items:center;gap:4px;margin-left:auto}
 .atb-ai-dot{width:8px;height:8px;border-radius:50%;background:#3a5060;transition:background .4s}
@@ -96,7 +102,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .atb-ai-dot.reflex{background:#3a5060}
 .atb-ai-lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
 
-/* input comentariu — în capul listei */
 .alog-comment{display:flex;gap:5px;padding:8px 9px;border-bottom:1px solid var(--border);
   background:rgba(255,255,255,.02)}
 .alog-cinput{flex:1;min-width:0;background:rgba(255,255,255,.06);
@@ -109,20 +114,17 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   font-size:15px;transition:all .15s;line-height:1}
 .alog-csend:hover{color:var(--glow);border-color:var(--glow)}
 
-/* nume — 2 rânduri */
 .alog-name{padding:6px 10px 5px;border-bottom:1px solid var(--border)}
 .alog-name-main{font-size:14px;font-weight:bold;
   color:hsl(var(--chue,150),65%,62%);line-height:1.3}
 .alog-name-pn{font-size:12px;color:#a8c8d4;margin-top:2px}
 
-/* stimuli */
 .alog-stim{display:flex;align-items:center;gap:6px;padding:5px 10px;
   font-size:12px;color:#b0ccd6;border-bottom:1px solid var(--border)}
 .alog-stimn{color:hsl(var(--chue,150),65%,62%);font-weight:bold}
 .alog-sbar{flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
 .alog-sfill{height:100%;background:hsl(var(--chue,150),55%,48%);border-radius:2px;transition:width .4s}
 
-/* intrări log */
 .alog-entries{flex:1;overflow-y:auto;padding:6px 10px;
   display:flex;flex-direction:column;gap:3px;min-height:60px}
 .alog-entry{font-size:13px;line-height:1.5;word-break:break-word;color:#ddeaf0}
@@ -130,7 +132,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .alog-entry.event{color:#c8dde5}
 .alog-entry.comment{color:#ffffff;font-weight:bold}
 
-/* butoane acţiuni */
 .alog-acts{display:flex;gap:4px;padding:6px 9px;border-top:1px solid var(--border)}
 .alog-abtn{flex:1;background:none;border:1px solid rgba(255,255,255,.12);
   color:#b0ccd6;padding:6px 2px;border-radius:3px;cursor:pointer;
@@ -140,31 +141,31 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .alog-abtn:disabled{opacity:.2;pointer-events:none}
 .alog-abtn.ready{color:var(--glow);border-color:var(--glow)}
 
-/* ── FOOTER ───────────────────────────────────────── */
+/* FOOTER */
 #footer{grid-column:1/3;border-top:1px solid var(--border);background:var(--bg2);
-  display:flex;align-items:center;gap:12px;padding:0 14px;
+  display:flex;align-items:center;gap:10px;padding:0 12px;
   font-size:11px;color:var(--dim);transition:border-top-color .5s}
 .stat{display:flex;align-items:center;gap:5px}
 .val{color:var(--glow);font-weight:bold;font-size:12px}
 .stat-sep{color:var(--border)}
-
-/* indicator nutrienți */
 #nutri-wrap{display:flex;align-items:center;gap:5px;cursor:default}
-#nutri-led{width:11px;height:11px;border-radius:50%;
-  background:#e74c3c;transition:background .6s;flex-shrink:0}
+#nutri-led{width:11px;height:11px;border-radius:50%;background:#e74c3c;transition:background .6s}
 #nutri-led.orange{background:#f39c12}
 #nutri-led.green{background:#2ecc71}
-#nutri-pct{font-size:10px;color:var(--dim)}
-
+#nutri-pct{font-size:10px}
 #footer button{background:none;border:1px solid var(--border);color:var(--dim);
-  padding:5px 11px;border-radius:4px;cursor:pointer;font:inherit;font-size:10px;
-  text-transform:uppercase;letter-spacing:.1em;transition:all .15s}
+  padding:5px 10px;border-radius:4px;cursor:pointer;font:inherit;font-size:10px;
+  text-transform:uppercase;letter-spacing:.09em;transition:all .15s}
 #footer button:hover{color:var(--glow);border-color:var(--glow);background:var(--glowfade)}
-#spawn-btn{margin-left:auto;color:var(--glow);border-color:rgba(46,204,154,.4)}
+#btn-link{border-color:rgba(41,128,185,.4);color:#2980b9}
+#btn-link:hover{color:#3498db;border-color:#3498db;background:rgba(52,152,219,.08)!important}
+#btn-link.linked{color:#2ecc71;border-color:rgba(46,204,154,.5)}
+#btn-instance{color:var(--glow);border-color:rgba(46,204,154,.4)}
+#spawn-btn{margin-left:auto;color:var(--glow);border-color:rgba(46,204,154,.35)}
 #reset-btn{color:#c0392b;border-color:rgba(192,57,43,.3)}
 #reset-btn:hover{color:#e74c3c;border-color:#e74c3c;background:rgba(231,76,60,.08)!important}
 #key-wrap{display:flex;align-items:center;gap:5px;font-size:10px}
-#key-wrap input{width:125px;background:rgba(255,255,255,.04);
+#key-wrap input{width:120px;background:rgba(255,255,255,.04);
   border:1px solid rgba(255,255,255,.1);color:var(--text);
   font:inherit;font-size:10px;padding:3px 7px;border-radius:3px;outline:none}
 #key-wrap input:focus{border-color:rgba(46,204,154,.35)}
@@ -172,12 +173,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   color:var(--dim);cursor:pointer;padding:3px 8px;border-radius:3px;
   font:inherit;font-size:10px;transition:all .15s}
 #key-wrap button:hover{color:var(--glow);border-color:var(--glow)}
-
 @keyframes flash-food{0%,100%{border-top-color:var(--border)}50%{border-top-color:var(--glow)}}
 @keyframes flash-danger{0%,100%{border-top-color:var(--border)}50%{border-top-color:#e74c3c}}
 #footer.flash-food{animation:flash-food .8s ease}
 #footer.flash-danger{animation:flash-danger .8s ease}
-
 ::-webkit-scrollbar{width:3px;height:3px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -186,60 +185,76 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 <body>
 <div id="app">
   <aside id="sidebar">
-    <div id="sb-head"><h1>◉ BIOTOP</h1><div id="sb-sub">lac abeomas</div></div>
+    <div id="sb-head">
+      <div id="sb-title">
+        <h1>◉ BIOTOP</h1>
+        <div class="save-dot unlinked" id="save-dot" title="Fișier neconectat"></div>
+        <span id="save-lbl">NECONECTAT</span>
+      </div>
+      <div id="sb-sub">lac abeomas</div>
+      <div id="instance-id">—</div>
+    </div>
     <div id="family-list"></div>
   </aside>
   <main id="lake"></main>
   <footer id="footer">
-    <div class="stat" title="Generația maximă">GEN <span class="val" id="s-gen">0</span></div>
+    <div class="stat">GEN <span class="val" id="s-gen">0</span></div>
     <span class="stat-sep">·</span>
-    <div class="stat" title="Abeomas vii">VII <span class="val" id="s-alive">0</span></div>
-    <div class="stat" title="Fosile">FOSILE <span class="val" id="s-dead">0</span></div>
-    <div class="stat" title="Stimuli totali">STIMULI <span class="val" id="s-stimuli">0</span></div>
-    <div id="nutri-wrap" title="Nivel nutrienți în lac">
+    <div class="stat">VII <span class="val" id="s-alive">0</span></div>
+    <div class="stat">FOSILE <span class="val" id="s-dead">0</span></div>
+    <div class="stat">STIMULI <span class="val" id="s-stimuli">0</span></div>
+    <div id="nutri-wrap" title="Nivel nutrienți">
       <div id="nutri-led"></div>
       <span id="nutri-pct">50%</span>
       <span style="color:var(--border)">NUTRI</span>
     </div>
-    <button title="Nutrienți la toate abeomas (+3 stimuli)" onclick="envFood()">+ NUTRIENȚI</button>
-    <button title="Pericol: mutație forțată" onclick="envDanger()">⚡ PERICOL</button>
+    <button onclick="envFood()" title="+3 stimuli la toți">+ NUTRIENȚI</button>
+    <button onclick="envDanger()" title="Mutație forțată">⚡ PERICOL</button>
+    <button id="btn-link" onclick="linkFile()" title="Conectează fișierul pentru auto-save">⛓ CONECTEAZĂ</button>
+    <button id="btn-instance" onclick="spawnNewInstance()" title="Naște o instanță-copil cu genomele actuale">🌿 INSTANȚĂ NOUĂ</button>
     <div id="key-wrap">
       <span>API:</span>
       <input type="password" id="api-key" placeholder="sk-ant-…">
       <button onclick="saveKey()">✓</button>
     </div>
-    <button id="spawn-btn" title="Naște o abeomă nouă gen 0" onclick="spawnGen0()">+ ABEOMĂ</button>
-    <button id="reset-btn" title="Șterge colonia" onclick="resetBiotope()">✕ RESET</button>
+    <button id="spawn-btn" onclick="spawnGen0()" title="Abeomă nouă gen 0">+ ABEOMĂ</button>
+    <button id="reset-btn" onclick="resetBiotope()" title="Șterge colonia">✕ RESET</button>
   </footer>
 </div>
+
+<!-- ═══════════════════════════════════════════════════════
+     STARE ÎNGLOBATĂ — rescrisă automat la fiecare save
+     ═══════════════════════════════════════════════════════ -->
+<script id="BIOTOP_STATE" type="application/json">null</script>
+
 <script>
 'use strict';
 
 // ── Dimensiuni CSS → pixeli ───────────────────────────────
-let AMSIZE = 170, LOG_W = 454;
+let AMSIZE=170, LOG_W=454;
 function calcSizes(){
-  const d=document.createElement('div');
-  d.style.cssText='position:absolute;visibility:hidden;';
+  const d=document.createElement('div');d.style.cssText='position:absolute;visibility:hidden;';
   document.body.appendChild(d);
-  d.style.width='4.5cm'; AMSIZE=d.offsetWidth||170;
-  d.style.width='12cm';  LOG_W =d.offsetWidth||454;
+  d.style.width='4.5cm';AMSIZE=d.offsetWidth||170;
+  d.style.width='12cm'; LOG_W =d.offsetWidth||454;
   document.body.removeChild(d);
 }
-
 const LAKE=document.getElementById('lake');
-let lakeW=0, lakeH=0;
+let lakeW=0,lakeH=0;
 function updateLakeSize(){lakeW=LAKE.offsetWidth;lakeH=LAKE.offsetHeight;}
 
 // ── State ─────────────────────────────────────────────────
-const B={creatures:new Map(),nextNum:1,maxGen:0,selected:null};
-let nutrients=50; // 0-100
-const expanded=new Set(); // ids with expanded children in sidebar
+const B={creatures:new Map(),nextNum:1,maxGen:0,selected:null,
+  instanceId:null,parentInstanceId:null,createdAt:null};
+let nutrients=50;
+const expanded=new Set();
 
-// ── Nomenclatură ──────────────────────────────────────────
+// ── Genome ────────────────────────────────────────────────
 const PRE=['Vesi','Mito','Proto','Cyto','Nucleo','Plasma','Ribo','Endo','Karyo','Lyso','Meso','Ecto','Glyco','Chromo'];
 const SUF=['cyte','plast','some','mere','zoa','phage','morph','blast','soma','glia','pore','cyst'];
 function mkName(gen,hue){const s=gen*41+Math.round(hue);return PRE[s%PRE.length]+SUF[Math.floor(s/5)%SUF.length]}
 function mkPN(){const n=new Date();return`${n.getFullYear()}${String(n.getMonth()+1).padStart(2,'0')}${String(n.getDate()).padStart(2,'0')}-${String(n.getHours()).padStart(2,'0')}${String(n.getMinutes()).padStart(2,'0')}`}
+function mkInstanceId(){const n=new Date();return`${n.getFullYear()}${String(n.getMonth()+1).padStart(2,'0')}${String(n.getDate()).padStart(2,'0')}_${String(n.getHours()).padStart(2,'0')}${String(n.getMinutes()).padStart(2,'0')}${String(n.getSeconds()).padStart(2,'0')}`}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 
 function mkGenome(generation=0,parentIds=[],pt=null){
@@ -261,7 +276,6 @@ function mkGenome(generation=0,parentIds=[],pt=null){
 const NS='http://www.w3.org/2000/svg';
 function svgE(t){return document.createElementNS(NS,t)}
 function f(v){return v.toFixed(2)}
-
 function catmull(pts){
   const n=pts.length;let d=`M${f(pts[0][0])} ${f(pts[0][1])}`;
   for(let i=0;i<n;i++){
@@ -278,11 +292,9 @@ function blobPts(cx,cy,r,n,t,chaos){
     return[cx+Math.cos(a)*r*(1+j),cy+Math.sin(a)*r*(1+j)];
   });
 }
-
 function updateBlob(c,T){
   const{body,mem,nuc,nuci,nucg,org}=c.s;
-  const CX=50,CY=50,r=20*c.genome.traits.size;
-  const chaos=.1+c.genome.traits.curiosity*.12,h=c.genome.traits.hue;
+  const CX=50,CY=50,r=20*c.genome.traits.size,chaos=.1+c.genome.traits.curiosity*.12,h=c.genome.traits.hue;
   const d=catmull(blobPts(CX,CY,r,12,T*.7,chaos*1.4));
   body.setAttribute('d',d);body.setAttribute('fill',`hsla(${h},40%,30%,.18)`);
   mem.setAttribute('d',d);mem.setAttribute('stroke',`hsla(${h},65%,58%,.9)`);
@@ -296,8 +308,7 @@ function updateBlob(c,T){
   while(org.children.length<nd)org.appendChild(svgE('circle'));
   while(org.children.length>nd)org.removeChild(org.lastChild);
   [...org.children].forEach((el,i)=>{
-    const ai=(i/nd)*Math.PI*2+T*.3+i*.7+c.phase;
-    const ri=r*.4+Math.sin(T*(.5+i*.2)+c.phase)*r*.15;
+    const ai=(i/nd)*Math.PI*2+T*.3+i*.7+c.phase,ri=r*.4+Math.sin(T*(.5+i*.2)+c.phase)*r*.15;
     el.setAttribute('cx',f(CX+Math.cos(ai)*ri));el.setAttribute('cy',f(CY+Math.sin(ai)*ri));
     el.setAttribute('r',f(1.2+.7*(i%3)));el.setAttribute('fill',`hsla(${h},60%,65%,.${20+i*6})`);
   });
@@ -306,7 +317,6 @@ function updateBlob(c,T){
 // ── Creare unitate DOM ────────────────────────────────────
 function createUnit(genome){
   const id=genome.id,h=genome.traits.hue;
-  // SVG
   const svg=svgE('svg');svg.setAttribute('viewBox','0 0 100 100');
   svg.className.baseVal='ablob';svg.style.setProperty('--chue',h);
   const defs=svgE('defs'),gr=svgE('radialGradient');
@@ -321,44 +331,37 @@ function createUnit(genome){
   const nuci=svgE('circle');svg.appendChild(nuci);
   const nucg=svgE('circle');nucg.setAttribute('fill',`url(#${gr.id})`);svg.appendChild(nucg);
 
-  // Panou log
   const log=document.createElement('div');log.className='alog';log.style.setProperty('--chue',h);
-
-  // 1. Mini header tehnic
-  const techBar=document.createElement('div');techBar.className='alog-tech';
+  // techbar
+  const tech=document.createElement('div');tech.className='alog-tech';
   const tbGen=document.createElement('span');tbGen.className='atb-gen';tbGen.textContent=`GEN ${genome.generation}`;
   const tbMut=document.createElement('span');tbMut.className='atb-mut';tbMut.textContent=`◎ ${genome.mutations.length}`;
   const tbAi=document.createElement('span');tbAi.className='atb-ai';
   const aiDot=document.createElement('div');aiDot.className='atb-ai-dot reflex';
   const aiLbl=document.createElement('span');aiLbl.className='atb-ai-lbl';aiLbl.textContent='REFLEX';
   tbAi.appendChild(aiDot);tbAi.appendChild(aiLbl);
-  techBar.appendChild(tbGen);techBar.appendChild(tbMut);techBar.appendChild(tbAi);
-
-  // 2. Input comentariu
+  tech.appendChild(tbGen);tech.appendChild(tbMut);tech.appendChild(tbAi);
+  // comment input
   const cRow=document.createElement('div');cRow.className='alog-comment';
   const cinput=document.createElement('input');cinput.type='text';cinput.className='alog-cinput';
   cinput.placeholder='observație…';cinput.setAttribute('autocomplete','off');
   const csend=document.createElement('button');csend.className='alog-csend';csend.textContent='↵';
   cRow.appendChild(cinput);cRow.appendChild(csend);
-
-  // 3. Nume (2 rânduri)
+  // name
   const nameDiv=document.createElement('div');nameDiv.className='alog-name';
   const nameMain=document.createElement('div');nameMain.className='alog-name-main';nameMain.textContent=genome.name;
   const namePn=document.createElement('div');namePn.className='alog-name-pn';namePn.textContent=genome.personnummer;
   nameDiv.appendChild(nameMain);nameDiv.appendChild(namePn);
-
-  // 4. Stimuli
+  // stimuli
   const stimRow=document.createElement('div');stimRow.className='alog-stim';
   const stimN=document.createElement('span');stimN.className='alog-stimn';stimN.textContent='0';
   const sbar=document.createElement('div');sbar.className='alog-sbar';
   const sfill=document.createElement('div');sfill.className='alog-sfill';sfill.style.width='0%';
   sbar.appendChild(sfill);
   stimRow.appendChild(stimN);stimRow.appendChild(document.createTextNode(' stimuli '));stimRow.appendChild(sbar);
-
-  // 5. Intrări
+  // entries
   const entries=document.createElement('div');entries.className='alog-entries';
-
-  // 6. Acțiuni
+  // actions
   const acts=document.createElement('div');acts.className='alog-acts';
   function mkB(txt,tip){const b=document.createElement('button');b.className='alog-abtn';b.textContent=txt;b.title=tip;return b}
   const bSpeak=mkB('VORB','Vorbește (+1 stimul)');
@@ -366,7 +369,7 @@ function createUnit(genome){
   const bBirth=mkB('NAȘTE','Naştere (20 stimuli)');bBirth.disabled=true;
   acts.appendChild(bSpeak);acts.appendChild(bMut);acts.appendChild(bBirth);
 
-  log.appendChild(techBar);log.appendChild(cRow);log.appendChild(nameDiv);
+  log.appendChild(tech);log.appendChild(cRow);log.appendChild(nameDiv);
   log.appendChild(stimRow);log.appendChild(entries);log.appendChild(acts);
 
   const unit=document.createElement('div');unit.className='aunit';unit.id='au-'+id;
@@ -374,29 +377,25 @@ function createUnit(genome){
   unit.appendChild(svg);unit.appendChild(log);
   LAKE.appendChild(unit);
 
-  // click pe blob → selectie
   svg.addEventListener('click',()=>selectCreature(id));
-
-  const submitC=()=>{const t=cinput.value.trim();if(!t)return;addEntry(id,t,'comment');cinput.value='';};
-  csend.addEventListener('click',submitC);
-  cinput.addEventListener('keydown',e=>{if(e.key==='Enter')submitC();});
+  const sc=()=>{const t=cinput.value.trim();if(!t)return;addEntry(id,t,'comment');cinput.value='';};
+  csend.addEventListener('click',sc);cinput.addEventListener('keydown',e=>{if(e.key==='Enter')sc();});
   bSpeak.addEventListener('click',()=>creatureSpeak(id));
   bMut.addEventListener('click',()=>creatureMutate(id));
   bBirth.addEventListener('click',()=>creatureBirth(id));
 
   return{genome,status:'alive',x:0,y:0,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,
-    phase:Math.random()*Math.PI*2,el:unit,svg,
-    s:{body,mem,nuc,nuci,nucg,org},
+    phase:Math.random()*Math.PI*2,el:unit,svg,s:{body,mem,nuc,nuci,nucg,org},
     entries,stimN,sfill,btnBirth:bBirth,tbMut,aiDot,aiLbl,
-    stimuli:0,childCount:0,speakBusy:false,speakMode:'reflex'};
+    stimuli:0,childCount:0,speakBusy:false};
 }
 
 // ── Spawn ─────────────────────────────────────────────────
 function spawn(genome,savedPos){
   B.maxGen=Math.max(B.maxGen,genome.generation);
   const c=createUnit(genome);
-  const margin=20,unitTotalW=AMSIZE+LOG_W+10;
-  const maxX=Math.max(lakeW-unitTotalW-margin*2,AMSIZE);
+  const margin=20;
+  const maxX=Math.max(lakeW-AMSIZE-margin*2,AMSIZE);
   const maxY=Math.max(lakeH-AMSIZE-margin*2,AMSIZE);
   if(savedPos){c.x=savedPos.x||lakeW/2;c.y=savedPos.y||lakeH/2;
     c.vx=savedPos.vx||c.vx;c.vy=savedPos.vy||c.vy;c.phase=savedPos.phase||c.phase;}
@@ -412,14 +411,10 @@ function spawnGen0(){spawn(mkGenome(0,[]));}
 
 // ── Selecție ──────────────────────────────────────────────
 function selectCreature(id){
-  if(B.selected){
-    const prev=B.creatures.get(B.selected);
-    if(prev)prev.el.classList.remove('selected');
-  }
+  if(B.selected){const prev=B.creatures.get(B.selected);if(prev)prev.el.classList.remove('selected');}
   B.selected=id;
-  const c=B.creatures.get(id);
-  if(c){c.el.classList.add('selected');}
-  render(); // update sidebar highlight
+  const c=B.creatures.get(id);if(c)c.el.classList.add('selected');
+  render();
 }
 
 // ── Log ───────────────────────────────────────────────────
@@ -441,9 +436,7 @@ function updateStimUI(id){
   const c=B.creatures.get(id);if(!c)return;
   c.stimN.textContent=c.stimuli;
   c.sfill.style.width=Math.min((c.stimuli/20)*100,100)+'%';
-  c.btnBirth.disabled=c.stimuli<20;
-  c.btnBirth.classList.toggle('ready',c.stimuli>=20);
-  // update mutatie count
+  c.btnBirth.disabled=c.stimuli<20;c.btnBirth.classList.toggle('ready',c.stimuli>=20);
   if(c.tbMut)c.tbMut.textContent=`◎ ${c.genome.mutations.length}`;
 }
 
@@ -455,48 +448,40 @@ const REFLEXE=['Tensiunea membranei se schimbă. Mă deplasez spre lumină.',
   'Semnal de la celula vecină: extensie pseudopod.',
   'Mitocondriile activate. Fluxul ATP crește.',
   'Genomul murmură. Mutația e acum parte din mine.',
-  'Receptorii membranari vibrează. Biotopul e flămând.',
   'Citoplasma se mișcă. Organitele dansează.',
   'Pelicula apei strălucește. Simt căldura lacului.',
 ];
-
 function setAiMode(c,mode){
-  c.speakMode=mode;
-  if(!c.aiDot)return;
+  c.speakMode=mode;if(!c.aiDot)return;
   c.aiDot.className='atb-ai-dot '+mode;
   c.aiLbl.textContent=mode==='api'?'EXTERN':mode==='ollama'?'OLLAMA':'REFLEX';
 }
-
 async function creatureSpeak(id){
   const c=B.creatures.get(id);if(!c||c.speakBusy||c.status!=='alive')return;
-  c.speakBusy=true;setTimeout(()=>c.speakBusy=false,3500);
-  addStimuli(id,1);
+  c.speakBusy=true;setTimeout(()=>c.speakBusy=false,3500);addStimuli(id,1);
   const key=localStorage.getItem('ant_key');
   if(key){try{
-    const sys=`Ești ${c.genome.name}, o abeomă din generația ${c.genome.generation}. Mutații: ${c.genome.mutations.join(', ')||'niciuna'}. Metabolism: ${c.genome.traits.metabolism.toFixed(2)}, curiozitate: ${c.genome.traits.curiosity.toFixed(2)}. Răspunde ca o conștiință celulară vie: poetic, scurt, biologic exact. Max 1-2 propoziții. Răspunde în română.`;
+    const sys=`Ești ${c.genome.name}, o abeomă din generația ${c.genome.generation}. Mutații: ${c.genome.mutations.join(', ')||'niciuna'}. Răspunde ca o conștiință celulară vie: poetic, scurt, biologic exact. Max 2 propoziții. În română.`;
     const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:100,system:sys,
         messages:[{role:'user',content:'Ce observi acum?'}]})});
     if(r.ok){const d=await r.json();const t=d.content?.[0]?.text;if(t){setAiMode(c,'api');addEntry(id,t,'speech');return;}}
   }catch(e){}}
-  // Încearcă Ollama local
   try{
     const r=await fetch('http://localhost:11434/api/generate',{method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'llama3',prompt:`Ești ${c.genome.name}, o abeomă. Spune o observație scurtă în română.`,stream:false}),
+      body:JSON.stringify({model:'llama3',prompt:`Ești ${c.genome.name}, o abeomă. O observație scurtă în română.`,stream:false}),
       signal:AbortSignal.timeout(3000)});
     if(r.ok){const d=await r.json();if(d.response){setAiMode(c,'ollama');addEntry(id,d.response.trim().split('\n')[0],'speech');return;}}
   }catch(e){}
-  setAiMode(c,'reflex');
-  addEntry(id,REFLEXE[Math.floor(Math.random()*REFLEXE.length)],'speech');
+  setAiMode(c,'reflex');addEntry(id,REFLEXE[Math.floor(Math.random()*REFLEXE.length)],'speech');
 }
 
 // ── Mutație ───────────────────────────────────────────────
 const MUT_POOL=['chemotaxie','fagocitoză','endocitoză','extensie_pseudopod',
   'formare_vacuolă','flux_membranar','expansie_nucleu','glicoliză_amplificată',
   'proliferare_mitocondrială','senzor_quorum','simbioză','fotofilie','divizare_rapidă','api_v2'];
-
 function creatureMutate(id){
   const c=B.creatures.get(id);if(!c||c.status!=='alive')return;
   const avail=MUT_POOL.filter(m=>!c.genome.mutations.includes(m));if(!avail.length)return;
@@ -517,27 +502,23 @@ function creatureBirth(id){
   const child=mkGenome(c.genome.generation+1,[c.genome.id],c.genome.traits);
   const lm=c.genome.mutations.slice(-1)[0];if(lm&&!child.mutations.includes(lm))child.mutations.push(lm);
   addEntry(id,`⊕ a dat naștere lui ${child.name} (gen${child.generation})`,'event');
-  expanded.add(id); // auto-expand părintele în arbore
-  spawn(child);
+  expanded.add(id);spawn(child);
   if(c.childCount>=4)setTimeout(()=>fossilize(id),900);
   save();render();stats();
 }
-
 function fossilize(id){
   const c=B.creatures.get(id);if(!c||c.status!=='alive')return;
-  c.status='fossil';c.genome.died=Date.now();
-  c.el.classList.add('fossil');
+  c.status='fossil';c.genome.died=Date.now();c.el.classList.add('fossil');
   const logEl=c.el.querySelector('.alog');if(logEl)logEl.remove();
   const lbl=document.createElement('div');lbl.className='afossil-label';
-  lbl.textContent=`☠ ${c.genome.name} · gen${c.genome.generation}`;
-  c.el.appendChild(lbl);
+  lbl.textContent=`☠ ${c.genome.name} · gen${c.genome.generation}`;c.el.appendChild(lbl);
   save();render();stats();
 }
 
 // ── Mediu ─────────────────────────────────────────────────
 function envFood(){
   nutrients=Math.min(100,nutrients+25);updateNutriUI();
-  B.creatures.forEach((c,id)=>{if(c.status==='alive'){addStimuli(id,3);addEntry(id,'Nutrienți absorbiți. Energie.','event');}});
+  B.creatures.forEach((c,id)=>{if(c.status==='alive'){addStimuli(id,3);addEntry(id,'Nutrienți absorbiți.','event');}});
   flashFtr('food');
 }
 function envDanger(){
@@ -547,115 +528,294 @@ function envDanger(){
 }
 function flashFtr(t){const f=document.getElementById('footer');f.className='flash-'+t;setTimeout(()=>f.className='',1000);}
 function saveKey(){const v=document.getElementById('api-key').value.trim();if(v)localStorage.setItem('ant_key',v);}
-
-// ── Nutrienți indicator ───────────────────────────────────
 function updateNutriUI(){
   const led=document.getElementById('nutri-led');
-  const pct=document.getElementById('nutri-pct');
-  if(!led)return;
-  pct.textContent=Math.round(nutrients)+'%';
-  led.className='';
-  if(nutrients>=55)led.classList.add('green');
-  else if(nutrients>=25)led.classList.add('orange');
-  // else red (default)
+  const pct=document.getElementById('nutri-pct');if(!led)return;
+  pct.textContent=Math.round(nutrients)+'%';led.className='';
+  if(nutrients>=55)led.classList.add('green');else if(nutrients>=25)led.classList.add('orange');
 }
 
-// ── Persistenţă ──────────────────────────────────────────
-function save(){
-  const data={nextNum:B.nextNum,maxGen:B.maxGen,nutrients,
+// ════════════════════════════════════════════════════════════
+//  PERSISTENŢĂ — File System Access API + localStorage
+// ════════════════════════════════════════════════════════════
+
+// ── IndexedDB helpers ─────────────────────────────────────
+function idbOp(mode,fn){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open('biotop_fs',1);
+    req.onupgradeneeded=e=>e.target.result.createObjectStore('kv');
+    req.onsuccess=e=>{
+      try{const tx=e.target.result.transaction('kv',mode);fn(tx.objectStore('kv'),res,rej);}
+      catch(err){rej(err);}
+    };
+    req.onerror=()=>rej(req.error);
+  });
+}
+const idbGet=(k)=>idbOp('readonly',(s,r,j)=>{const q=s.get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);});
+const idbSet=(k,v)=>idbOp('readwrite',(s,r,j)=>{const q=s.put(v,k);q.onsuccess=()=>r();q.onerror=()=>j(q.error);});
+
+// ── File System ───────────────────────────────────────────
+const FS={
+  handle:null,
+  supported:typeof window.showOpenFilePicker==='function',
+
+  setSaveStatus(s){
+    const dot=document.getElementById('save-dot');
+    const lbl=document.getElementById('save-lbl');
+    if(!dot)return;
+    dot.className='save-dot '+s;
+    const L={unlinked:'NECONECTAT',linked:'CONECTAT',saving:'SCRIERE…',saved:'SALVAT',error:'EROARE'};
+    if(lbl)lbl.textContent=L[s]||s;
+    const btn=document.getElementById('btn-link');
+    if(btn)btn.classList.toggle('linked',s==='linked'||s==='saved'||s==='saving');
+  },
+
+  async tryRestoreHandle(){
+    try{
+      const h=await idbGet('fileHandle');if(!h)return false;
+      // queryPermission fără user gesture — poate fi 'prompt'
+      const p=await h.queryPermission({mode:'readwrite'});
+      if(p==='granted'){this.handle=h;return true;}
+    }catch(e){}
+    return false;
+  },
+
+  async requestPermissionForHandle(){
+    // Necesită user gesture
+    try{
+      const h=await idbGet('fileHandle');if(!h)return false;
+      const p=await h.requestPermission({mode:'readwrite'});
+      if(p==='granted'){this.handle=h;this.setSaveStatus('linked');return true;}
+    }catch(e){}
+    return false;
+  },
+
+  async link(){
+    if(!this.supported){
+      alert('File System Access API lipsește.\nFolosește Chrome 86+ sau Edge 86+.\nFallback: auto-download activ.');
+      return false;
+    }
+    try{
+      const[h]=await window.showOpenFilePicker({
+        types:[{description:'Biotop HTML',accept:{'text/html':['.html']}}],multiple:false});
+      const p=await h.requestPermission({mode:'readwrite'});
+      if(p!=='granted')return false;
+      this.handle=h;
+      await idbSet('fileHandle',h);
+      // Citim template-ul din fișierul selectat
+      const file=await h.getFile();
+      HTML_TEMPLATE=await file.text();
+      this.setSaveStatus('linked');
+      return true;
+    }catch(e){if(e.name!=='AbortError')console.warn('link:',e);return false;}
+  },
+
+  async write(html){
+    if(!this.handle)return false;
+    try{
+      this.setSaveStatus('saving');
+      const w=await this.handle.createWritable();
+      await w.write(html);await w.close();
+      this.setSaveStatus('saved');
+      setTimeout(()=>this.setSaveStatus('linked'),1800);
+      return true;
+    }catch(e){
+      console.warn('write error',e);this.setSaveStatus('error');
+      setTimeout(()=>this.setSaveStatus('linked'),3000);
+      return false;
+    }
+  }
+};
+
+let HTML_TEMPLATE=null;
+let _saveTimer=null;
+
+// Injectează JSON în tag-ul de stare
+function injectState(template,json){
+  const START='<script id="BIOTOP_STATE" type="application/json">';
+  const END='<\/script>';
+  const si=template.indexOf(START);if(si===-1)return template;
+  const ei=template.indexOf(END,si+START.length);if(ei===-1)return template;
+  return template.slice(0,si+START.length)+json+template.slice(ei);
+}
+
+function collectState(){
+  return{
+    version:3,
+    instanceId:B.instanceId,parentInstanceId:B.parentInstanceId,createdAt:B.createdAt,
+    nextNum:B.nextNum,maxGen:B.maxGen,nutrients,
     creatures:[...B.creatures.entries()].map(([id,c])=>({
       id,genome:c.genome,status:c.status,
       x:c.x,y:c.y,vx:c.vx,vy:c.vy,phase:c.phase,
-      childCount:c.childCount,stimuli:c.stimuli}))};
-  try{localStorage.setItem('biotop_v3',JSON.stringify(data));}catch(e){}
+      childCount:c.childCount,stimuli:c.stimuli}))
+  };
 }
 
+async function autoSave(){
+  const state=collectState();
+  const json=JSON.stringify(state);
+  // Fallback: localStorage
+  try{localStorage.setItem('biotop_v3',json);}catch(e){}
+  // Scriere în fișierul propriu
+  if(FS.handle&&HTML_TEMPLATE){
+    const newHtml=injectState(HTML_TEMPLATE,json);
+    const ok=await FS.write(newHtml);
+    if(ok){
+      // Actualizăm template-ul cu starea nouă înglobată
+      HTML_TEMPLATE=newHtml;
+    }
+  }
+}
+
+function save(){
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(autoSave,600);
+}
+
+// ── Conectare fișier (apelat din footer button) ───────────
+async function linkFile(){
+  const ok=await FS.link();
+  if(ok){
+    // Salvare imediată după conectare
+    await autoSave();
+  }
+}
+
+// ── Instanță nouă ─────────────────────────────────────────
+async function spawnNewInstance(){
+  if(!HTML_TEMPLATE){
+    alert('Nu am template-ul HTML.\nConectează mai întâi fișierul cu ⛓ CONECTEAZĂ,\nsau redeschide și conectează înainte de a crea o instanță.');
+    return;
+  }
+  const alive=[...B.creatures.values()].filter(c=>c.status==='alive');
+  if(!alive.length){alert('Nicio abeomă vie. Nu se poate naște o instanță.');return;}
+
+  const newId=mkInstanceId();
+  // Fondatorii: genomele vii, resetate ca gen 0 al noii instanțe
+  const founders=alive.map((c,i)=>{
+    const g={...c.genome,stimuli:0,childCount:0,parentIds:[],
+      born:Date.now(),died:null,personnummer:mkPN()};
+    return{id:g.id,genome:g,status:'alive',
+      x:120+i*220,y:200+(i%2)*150,
+      vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,
+      phase:Math.random()*Math.PI*2,childCount:0,stimuli:0};
+  });
+
+  const newState={version:3,instanceId:newId,parentInstanceId:B.instanceId,
+    createdAt:Date.now(),nextNum:B.nextNum,maxGen:0,nutrients:70,
+    creatures:founders};
+  const newHtml=injectState(HTML_TEMPLATE,JSON.stringify(newState));
+
+  if(FS.supported){
+    try{
+      const handle=await window.showSaveFilePicker({
+        suggestedName:`biotop_${newId}.html`,
+        types:[{description:'Biotop HTML',accept:{'text/html':['.html']}}]
+      });
+      const w=await handle.createWritable();
+      await w.write(newHtml);await w.close();
+      // Deschide în tab nou
+      const blob=new Blob([newHtml],{type:'text/html'});
+      window.open(URL.createObjectURL(blob),'_blank');
+      addEntry(alive[0].genome.id,`🌿 Instanță-copil ${newId} creată`,'event');
+      return;
+    }catch(e){if(e.name==='AbortError')return;}
+  }
+  // Fallback download
+  const blob=new Blob([newHtml],{type:'text/html'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`biotop_${newId}.html`;a.click();
+  addEntry(alive[0].genome.id,`🌿 Instanță-copil ${newId} descărcată`,'event');
+}
+
+// ── Load ──────────────────────────────────────────────────
 function load(){
+  let data=null;
+  // Prioritate 1: stare înglobată în <script id="BIOTOP_STATE">
   try{
-    const raw=localStorage.getItem('biotop_v3');if(!raw)return false;
-    const data=JSON.parse(raw);
-    B.nextNum=data.nextNum||1;B.maxGen=data.maxGen||0;
-    nutrients=data.nutrients??50;
-    data.creatures.forEach(item=>{
-      const c=spawn(item.genome,{x:item.x||0,y:item.y||0,vx:item.vx,vy:item.vy,phase:item.phase});
-      c.stimuli=item.stimuli||0;c.childCount=item.childCount||0;
-      c.genome.stimuli=c.stimuli;c.genome.childCount=c.childCount;
-      updateStimUI(item.id);
-      if(item.status==='fossil'){
-        c.status='fossil';c.genome.died=item.genome.died;
-        c.el.classList.add('fossil');
-        const logEl=c.el.querySelector('.alog');if(logEl)logEl.remove();
-        const lbl=document.createElement('div');lbl.className='afossil-label';
-        lbl.textContent=`☠ ${item.genome.name} · gen${item.genome.generation}`;c.el.appendChild(lbl);
-      }
-    });
-    return B.creatures.size>0;
-  }catch(e){console.error('load',e);return false;}
-}
-function resetBiotope(){if(!confirm('Șterge toată colonia? Ireversibil.'))return;localStorage.removeItem('biotop_v3');location.reload();}
+    const el=document.getElementById('BIOTOP_STATE');
+    if(el){const raw=el.textContent.trim();if(raw&&raw!=='null')data=JSON.parse(raw);}
+  }catch(e){}
+  // Prioritate 2: localStorage
+  if(!data){
+    try{const raw=localStorage.getItem('biotop_v3');if(raw)data=JSON.parse(raw);}catch(e){}
+  }
+  if(!data)return false;
 
-// ── Sidebar: arbore cu +/- ────────────────────────────────
+  B.instanceId=data.instanceId||mkInstanceId();
+  B.parentInstanceId=data.parentInstanceId||null;
+  B.createdAt=data.createdAt||Date.now();
+  B.nextNum=data.nextNum||1;B.maxGen=data.maxGen||0;
+  nutrients=data.nutrients??50;
+  updateInstanceUI();
+
+  (data.creatures||[]).forEach(item=>{
+    const c=spawn(item.genome,{x:item.x||0,y:item.y||0,vx:item.vx,vy:item.vy,phase:item.phase});
+    c.stimuli=item.stimuli||0;c.childCount=item.childCount||0;
+    c.genome.stimuli=c.stimuli;c.genome.childCount=c.childCount;
+    updateStimUI(item.id);
+    if(item.status==='fossil'){
+      c.status='fossil';c.genome.died=item.genome.died;c.el.classList.add('fossil');
+      const logEl=c.el.querySelector('.alog');if(logEl)logEl.remove();
+      const lbl=document.createElement('div');lbl.className='afossil-label';
+      lbl.textContent=`☠ ${item.genome.name} · gen${item.genome.generation}`;c.el.appendChild(lbl);
+    }
+  });
+  return B.creatures.size>0;
+}
+
+function updateInstanceUI(){
+  const el=document.getElementById('instance-id');
+  if(el)el.textContent=`${B.instanceId||'—'}${B.parentInstanceId?' ← '+B.parentInstanceId:''}`;
+  document.title=`BIOTOP ${B.instanceId||''}`;
+}
+
+function resetBiotope(){
+  if(!confirm('Șterge toată colonia? Ireversibil.'))return;
+  localStorage.removeItem('biotop_v3');location.reload();
+}
+
+// ── Sidebar arbore ────────────────────────────────────────
 function buildChildMap(){
   const children=new Map(),roots=[];
   B.creatures.forEach((c,id)=>{
     const pid=c.genome.parentIds?.[0];
-    if(!pid||!B.creatures.has(pid)){roots.push(id);}
+    if(!pid||!B.creatures.has(pid))roots.push(id);
     else{if(!children.has(pid))children.set(pid,[]);children.get(pid).push(id);}
   });
-  // sort roots by num
   roots.sort((a,b)=>B.creatures.get(a).genome.num-B.creatures.get(b).genome.num);
   return{roots,children};
 }
-
 function renderNode(id,children,depth,list){
   const c=B.creatures.get(id);if(!c)return;
   const kids=(children.get(id)||[]).sort((a,b)=>B.creatures.get(a).genome.num-B.creatures.get(b).genome.num);
-  const hasKids=kids.length>0;
-  const isExpanded=expanded.has(id);
-
-  const row=document.createElement('div');row.className='tree-row';
-  row.style.marginLeft=(depth*14)+'px';
-
+  const hasKids=kids.length>0,isExp=expanded.has(id);
+  const row=document.createElement('div');row.className='tree-row';row.style.marginLeft=(depth*14)+'px';
   const tog=document.createElement('span');tog.className='tree-tog';
-  if(hasKids){
-    tog.textContent=isExpanded?'▾':'▸';
-    tog.addEventListener('click',e=>{
-      e.stopPropagation();
-      if(expanded.has(id))expanded.delete(id);else expanded.add(id);
-      render();
-    });
-  } else {tog.textContent='·';}
-
+  if(hasKids){tog.textContent=isExp?'▾':'▸';
+    tog.addEventListener('click',e=>{e.stopPropagation();if(expanded.has(id))expanded.delete(id);else expanded.add(id);render();});
+  }else tog.textContent='·';
   const card=document.createElement('div');
   card.className=`ccard ${c.status}${id===B.selected?' selected':''}`;
   card.style.setProperty('--chue',c.genome.traits.hue);
   card.innerHTML=`<div class="cname">${c.genome.name}</div>
     <div class="cmeta">${c.genome.personnummer}</div>
     <div class="cstatus ${c.status==='alive'?'alive':'dead'}">${c.status==='alive'?`${c.childCount}/4`:'☠'}</div>`;
-  card.addEventListener('click',()=>selectAndFocus(id));
-
+  card.addEventListener('click',()=>{
+    selectCreature(id);
+    const cr=B.creatures.get(id);
+    if(cr)LAKE.scrollTo?.({left:cr.x-lakeW/2,top:cr.y-lakeH/2,behavior:'smooth'});
+  });
   row.appendChild(tog);row.appendChild(card);list.appendChild(row);
-  if(hasKids&&isExpanded)kids.forEach(kid=>renderNode(kid,children,depth+1,list));
+  if(hasKids&&isExp)kids.forEach(kid=>renderNode(kid,children,depth+1,list));
 }
-
 function render(){
   const list=document.getElementById('family-list');list.innerHTML='';
   const{roots,children}=buildChildMap();
   roots.forEach(id=>renderNode(id,children,0,list));
-  const alive=[...B.creatures.values()].filter(c=>c.status==='alive').length;
-  document.getElementById('sb-sub').textContent=`${alive} abeomas vii`;
+  document.getElementById('sb-sub').textContent=
+    `${[...B.creatures.values()].filter(c=>c.status==='alive').length} abeomas vii`;
 }
-
-function selectAndFocus(id){
-  selectCreature(id);
-  const c=B.creatures.get(id);
-  if(!c)return;
-  // Scroll lac la abeomă
-  LAKE.scrollTo?.({
-    left:c.x-lakeW/2,top:c.y-lakeH/2,behavior:'smooth'
-  });
-}
-
 function stats(){
   const all=[...B.creatures.values()];
   document.getElementById('s-gen').textContent=B.maxGen;
@@ -664,11 +824,10 @@ function stats(){
   document.getElementById('s-stimuli').textContent=all.reduce((s,c)=>s+c.stimuli,0);
 }
 
-// ── Animaţie + drift ──────────────────────────────────────
+// ── Animaţie ──────────────────────────────────────────────
 function drift(c){
-  const margin=14;
-  const isSelected=(B.selected===c.genome.id);
-  const unitW=AMSIZE+(isSelected?LOG_W+10:0);
+  const margin=14,isSel=(B.selected===c.genome.id);
+  const unitW=AMSIZE+(isSel?LOG_W+10:0);
   c.x+=c.vx;c.y+=c.vy;
   if(c.x<margin+AMSIZE/2){c.x=margin+AMSIZE/2;c.vx=Math.abs(c.vx);}
   if(c.x-AMSIZE/2+unitW>lakeW-margin){c.x=lakeW-margin-unitW+AMSIZE/2;c.vx=-Math.abs(c.vx);}
@@ -676,19 +835,15 @@ function drift(c){
   if(c.y+AMSIZE/2>lakeH-margin){c.y=lakeH-margin-AMSIZE/2;c.vy=-Math.abs(c.vy);}
   c.el.style.transform=`translate(${Math.round(c.x-AMSIZE/2)}px,${Math.round(c.y-AMSIZE/2)}px)`;
 }
-
 function animate(ts){
   B.creatures.forEach(c=>{
     if(c.status!=='alive'||!c.s?.body)return;
-    const T=ts*.001*(.4+c.genome.traits.metabolism*.5)+c.phase;
-    updateBlob(c,T);drift(c);
+    updateBlob(c,ts*.001*(.4+c.genome.traits.metabolism*.5)+c.phase);drift(c);
   });
   requestAnimationFrame(animate);
 }
-
 function buildLakeBg(){
-  const svg=svgE('svg');
-  svg.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0';
+  const svg=svgE('svg');svg.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0';
   for(let i=0;i<55;i++){
     const c=svgE('circle');
     c.setAttribute('cx',(Math.random()*100)+'%');c.setAttribute('cy',(Math.random()*100)+'%');
@@ -699,20 +854,45 @@ function buildLakeBg(){
 }
 
 // ── Init ─────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded',()=>{
+window.addEventListener('DOMContentLoaded',async()=>{
   calcSizes();updateLakeSize();
   window.addEventListener('resize',updateLakeSize);
   buildLakeBg();
   const key=localStorage.getItem('ant_key');if(key)document.getElementById('api-key').value=key;
-  if(!load()||B.creatures.size===0)spawnGen0();
+
+  if(!load()||B.creatures.size===0){
+    B.instanceId=mkInstanceId();B.createdAt=Date.now();
+    updateInstanceUI();spawnGen0();
+  }
   render();stats();updateNutriUI();
   requestAnimationFrame(animate);
   setInterval(stats,4000);
-  // Decay nutrienți
   setInterval(()=>{nutrients=Math.max(0,nutrients-1.5);updateNutriUI();},8000);
-  // Auto-vorbire
   setInterval(()=>{B.creatures.forEach((c,id)=>{if(c.status==='alive'&&Math.random()<.3)creatureSpeak(id);});},
     25000+Math.random()*20000);
+
+  // ── File System: restaurare handle din sesiunea anterioară ──
+  FS.setSaveStatus('unlinked');
+  const hadHandle=await FS.tryRestoreHandle();
+  if(hadHandle){
+    // Handle existent, permisiune era grantată — citim template
+    try{
+      const file=await FS.handle.getFile();
+      HTML_TEMPLATE=await file.text();
+      FS.setSaveStatus('linked');
+      // Salvare cu starea actuală (poate fi mai nouă decât fișierul)
+      await autoSave();
+    }catch(e){FS.setSaveStatus('unlinked');}
+  } else {
+    // Fallback: fetch template din URL curent
+    try{
+      const resp=await fetch(location.href);
+      HTML_TEMPLATE=await resp.text();
+    }catch(e){
+      // Nu putem fetcha (CORS, etc.) — template null, fallback localStorage only
+      console.info('Template fetch failed — self-save disabled until file linked.');
+    }
+  }
 });
 </script>
 </body>
