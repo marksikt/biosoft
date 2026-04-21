@@ -1330,7 +1330,6 @@ Returnează DOAR codul HTML complet, fără explicații, fără markdown, fără
           setStatus('ok','✓ Salvat! Se reîncarcă...');
           setTimeout(()=>location.reload(),700);
         } else {
-          // Nu avem handle — încearcă să-l obținem acum
           try{
             fsFileHandle=await window.showSaveFilePicker({
               suggestedName:'biotope.html',
@@ -1342,20 +1341,16 @@ Returnează DOAR codul HTML complet, fără explicații, fără markdown, fără
             setStatus('ok','✓ Salvat! Se reîncarcă...');
             setTimeout(()=>location.reload(),700);
           }catch(e2){
-            // Fallback descărcare
             const a=document.createElement('a');
             a.href=URL.createObjectURL(new Blob([finalHtml],{type:'text/html'}));
             a.download='biotope_nou.html';a.click();
             setStatus('ok','✓ Descărcat ca biotope_nou.html');
+            resetReprog();
           }
         }
-      }catch(e){setStatus('err','✗ '+e.message);}
+      }catch(e){setStatus('err','✗ '+e.message);resetReprog();}
     };
-    cancelBtn.onclick=()=>{
-      preview.style.display='none';bar.style.display='none';
-      barFill.style.width='0%';btn.disabled=false;
-      status.className='';status.textContent='';
-    };
+    cancelBtn.onclick=resetReprog;
 
   }catch(e){
     clearTimeout(timeout);
@@ -1366,7 +1361,19 @@ Returnează DOAR codul HTML complet, fără explicații, fără markdown, fără
   }
 
   function setStatus(cls,msg){status.className=cls;status.textContent=msg;}
+  function resetReprog(){
+    preview.style.display='none';bar.style.display='none';
+    barFill.style.width='0%';btn.disabled=false;
+    status.className='';status.textContent='';
+  }
 }
+
+// Reset buton când userul modifică textul
+document.addEventListener('DOMContentLoaded',()=>{
+  const inp=document.getElementById('reprog-input');
+  const btn=document.getElementById('reprog-btn');
+  if(inp&&btn) inp.addEventListener('input',()=>{btn.disabled=false;});
+});
 
 // ── Init ─────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{
