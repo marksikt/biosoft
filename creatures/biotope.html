@@ -179,12 +179,32 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 #footer.flash-food{animation:flash-food .8s ease}
 #footer.flash-danger{animation:flash-danger .8s ease}
 
+/* canvas animații */
+#fx-canvas{position:fixed;inset:0;pointer-events:none;z-index:999;
+  width:100%;height:100%}
+
+/* ping */
+#ping-btn{color:var(--dim)}
+#ping-btn.pinging{opacity:.5;pointer-events:none}
+#ping-btn.ok{color:#2ecc71!important;border-color:#2ecc71!important}
+#ping-btn.fail{color:#e74c3c!important;border-color:#e74c3c!important}
+
+/* ping toast */
+#ping-toast{position:fixed;bottom:54px;left:50%;transform:translateX(-50%);
+  background:#0d1215;border:1px solid rgba(255,255,255,.15);
+  color:#9ab0b8;font-size:11px;padding:6px 14px;border-radius:5px;
+  font-family:'Courier New',monospace;pointer-events:none;
+  opacity:0;transition:opacity .3s;z-index:1000;white-space:nowrap}
+#ping-toast.show{opacity:1}
+
 ::-webkit-scrollbar{width:3px;height:3px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 </style>
 </head>
 <body>
+<canvas id="fx-canvas"></canvas>
+<div id="ping-toast"></div>
 <div id="app">
   <aside id="sidebar">
     <div id="sb-head"><h1>◉ BIOTOP</h1><div id="sb-sub">lac abeomas</div></div>
@@ -208,6 +228,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
       <span>API:</span>
       <input type="password" id="api-key" placeholder="sk-ant-…">
       <button onclick="saveKey()">✓</button>
+      <button id="ping-btn" onclick="pingClaude()" title="Testează conexiunea Claude">PING</button>
     </div>
     <button id="spawn-btn" title="Naște o abeomă nouă gen 0" onclick="spawnGen0()">+ ABEOMĂ</button>
     <button id="reset-btn" title="Șterge colonia" onclick="resetBiotope()">✕ RESET</button>
@@ -536,18 +557,182 @@ function fossilize(id){
 }
 
 // ── Mediu ─────────────────────────────────────────────────
+// ── Canvas FX ─────────────────────────────────────────────
+const FX = document.getElementById('fx-canvas');
+const CTX = FX.getContext('2d');
+let fxParticles = [];
+
+function resizeFX(){FX.width=innerWidth;FX.height=innerHeight;}
+resizeFX();
+window.addEventListener('resize',resizeFX);
+
+function fxLoop(){
+  CTX.clearRect(0,0,FX.width,FX.height);
+  fxParticles = fxParticles.filter(p => p.life > 0);
+  fxParticles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += p.gravity;
+    p.vx *= p.drag; p.vy *= p.drag;
+    p.rotation += p.rotSpeed;
+    p.life -= p.decay;
+    const a = Math.max(0, p.life);
+    CTX.save();
+    CTX.globalAlpha = a;
+    CTX.translate(p.x, p.y);
+    CTX.rotate(p.rotation);
+    if (p.type === 'corn') {
+      // Boabă de porumb — elipsă galbenă
+      CTX.fillStyle = p.color;
+      CTX.beginPath();
+      CTX.ellipse(0, 0, p.rx, p.ry, 0, 0, Math.PI*2);
+      CTX.fill();
+      // luciu
+      CTX.fillStyle = 'rgba(255,255,200,0.35)';
+      CTX.beginPath();
+      CTX.ellipse(-p.rx*.25, -p.ry*.3, p.rx*.3, p.ry*.2, -0.4, 0, Math.PI*2);
+      CTX.fill();
+    } else if (p.type === 'blood') {
+      // Spirală de sânge
+      CTX.strokeStyle = p.color;
+      CTX.lineWidth = p.lw;
+      CTX.lineCap = 'round';
+      CTX.beginPath();
+      for (let i = 0; i < p.turns * Math.PI * 2; i += 0.15) {
+        const r = p.r0 * (1 - i / (p.turns * Math.PI * 2));
+        const sx = Math.cos(i + p.phase) * r;
+        const sy = Math.sin(i + p.phase) * r;
+        i === 0 ? CTX.moveTo(sx, sy) : CTX.lineTo(sx, sy);
+      }
+      CTX.stroke();
+      // Picătură la capăt
+      CTX.fillStyle = p.color;
+      CTX.beginPath();
+      CTX.arc(0, 0, p.lw * 1.2, 0, Math.PI*2);
+      CTX.fill();
+    }
+    CTX.restore();
+  });
+  requestAnimationFrame(fxLoop);
+}
+requestAnimationFrame(fxLoop);
+
+function spawnCorn(){
+  const lakeRect = document.getElementById('lake').getBoundingClientRect();
+  for(let i = 0; i < 60; i++){
+    setTimeout(()=>{
+      const x = lakeRect.left + Math.random() * lakeRect.width;
+      const colors = ['#f4d03f','#f1c40f','#e6b800','#f7dc6f','#d4ac0d'];
+      fxParticles.push({
+        type:'corn', x, y: -10,
+        vx: (Math.random()-.5)*4,
+        vy: 2 + Math.random()*5,
+        gravity: 0.18, drag: 0.98,
+        rotation: Math.random()*Math.PI*2,
+        rotSpeed: (Math.random()-.5)*.18,
+        rx: 4+Math.random()*4, ry: 3+Math.random()*3,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        life: 1, decay: 0.012 + Math.random()*0.01
+      });
+    }, i * 30);
+  }
+}
+
+function spawnBlood(){
+  const lakeRect = document.getElementById('lake').getBoundingClientRect();
+  for(let i = 0; i < 35; i++){
+    setTimeout(()=>{
+      const x = lakeRect.left + Math.random() * lakeRect.width;
+      const y = lakeRect.top  + Math.random() * lakeRect.height;
+      fxParticles.push({
+        type:'blood', x, y,
+        vx: (Math.random()-.5)*2.5,
+        vy: (Math.random()-.5)*2.5,
+        gravity: 0.04, drag: 0.97,
+        rotation: Math.random()*Math.PI*2,
+        rotSpeed: (Math.random()-.5)*.12,
+        r0: 18+Math.random()*28,
+        turns: 2.5+Math.random()*2,
+        phase: Math.random()*Math.PI*2,
+        lw: 1.2+Math.random()*2,
+        color: `rgba(${160+Math.floor(Math.random()*60)},${Math.floor(Math.random()*20)},${Math.floor(Math.random()*20)},0.9)`,
+        life: 1, decay: 0.008 + Math.random()*0.008
+      });
+    }, i * 50);
+  }
+}
+
 function envFood(){
   nutrients=Math.min(100,nutrients+25);updateNutriUI();
   B.creatures.forEach((c,id)=>{if(c.status==='alive'){addStimuli(id,3);addEntry(id,'Nutrienți absorbiți. Energie.','event');}});
   flashFtr('food');
+  spawnCorn();
 }
 function envDanger(){
   nutrients=Math.max(0,nutrients-15);updateNutriUI();
   B.creatures.forEach((c,id)=>{if(c.status==='alive')creatureMutate(id);});
   flashFtr('danger');
+  spawnBlood();
 }
 function flashFtr(t){const f=document.getElementById('footer');f.className='flash-'+t;setTimeout(()=>f.className='',1000);}
-function saveKey(){const v=document.getElementById('api-key').value.trim();if(v)localStorage.setItem('ant_key',v);}
+
+function saveKey(){
+  const v=document.getElementById('api-key').value.trim();
+  if(v) localStorage.setItem('ant_key',v);
+  // Broadcast cheii la toate iframe-urile amobelor
+  B.creatures.forEach(c=>{
+    if(c.status==='alive'&&c.iframe){
+      try{c.iframe.contentWindow?.postMessage({type:'apikey',key:v},'*');}catch(e){}
+    }
+  });
+}
+
+// ── Ping Claude ───────────────────────────────────────────
+async function pingClaude(){
+  const btn=document.getElementById('ping-btn');
+  const toast=document.getElementById('ping-toast');
+  const key=localStorage.getItem('ant_key');
+  if(!key){showToast('⚠ Nicio cheie API salvată.','#e74c3c');return;}
+  btn.classList.add('pinging');btn.textContent='...';
+  showToast('Se conectează la Claude...','#5a7a88');
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',max_tokens:20,
+        messages:[{role:'user',content:'Răspunde exact: Claude, prezent!'}]
+      })
+    });
+    if(r.ok){
+      const d=await r.json();
+      const txt=d.content?.[0]?.text??'Claude, prezent!';
+      showToast(`✓ ${txt}`,'#2ecc71');
+      btn.classList.remove('pinging');btn.classList.add('ok');btn.textContent='✓ OK';
+      setTimeout(()=>{btn.classList.remove('ok');btn.textContent='PING';},3000);
+    } else {
+      const err=await r.json().catch(()=>({}));
+      showToast(`✗ ${r.status}: ${err?.error?.message??'cheie invalidă?'}`,'#e74c3c');
+      btn.classList.remove('pinging');btn.classList.add('fail');btn.textContent='✗ FAIL';
+      setTimeout(()=>{btn.classList.remove('fail');btn.textContent='PING';},4000);
+    }
+  }catch(e){
+    showToast('✗ CORS — deschide via http://localhost:8080','#e74c3c');
+    btn.classList.remove('pinging');btn.classList.add('fail');btn.textContent='✗ CORS';
+    setTimeout(()=>{btn.classList.remove('fail');btn.textContent='PING';},4000);
+  }
+}
+
+function showToast(msg,color='#9ab0b8'){
+  const t=document.getElementById('ping-toast');
+  t.textContent=msg;t.style.color=color;t.style.borderColor=color+'55';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
 
 // ── Nutrienți indicator ───────────────────────────────────
 function updateNutriUI(){
