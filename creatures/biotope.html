@@ -318,6 +318,10 @@ const __ORIGINAL_SRC__ = (()=>{
   const raw = document.documentElement.outerHTML;
   return raw.split(__CLOSE_SCRIPT__).join('<\\/' + 'script>');
 })();
+// Dezescapare înainte de salvare — restaurează tag-urile reale
+function __toSaveHtml__(src){
+  return src.split('<\\/' + 'script>').join(__CLOSE_SCRIPT__);
+}
 
 // ── Dimensiuni CSS → pixeli ───────────────────────────────
 let AMSIZE = 170, LOG_W = 454;
@@ -1298,11 +1302,12 @@ async function autosaveFile(){
       });
     }
     btn.textContent='💾 SALVEZ...';btn.className='';
-    // Folosim sursa originală escapată, nu outerHTML curent
-    const html=__ORIGINAL_SRC__;
-    // Injectează starea coloniei ca script inline de boot
-    const stateScript=`<script id="__biostate__">window.__BIOSTATE__=${JSON.stringify(exportState())};<\/script>`;
-    const finalHtml=html.replace(/<script id="__biostate__">[\s\S]*?<\/script>/,'')
+    // Folosim sursa originală, dezescapată pentru salvare
+    const html=__toSaveHtml__(__ORIGINAL_SRC__);
+    // Injectează starea coloniei
+    const stateTag='scr'+'ipt';
+    const stateScript=`<${stateTag} id="__biostate__">window.__BIOSTATE__=${JSON.stringify(exportState())};</${stateTag}>`;
+    const finalHtml=html.replace(new RegExp('<'+stateTag+' id="__biostate__">[\\s\\S]*?</'+stateTag+'>'),''  )
                         .replace('</head>',stateScript+'</head>');
     const writable=await fsFileHandle.createWritable();
     await writable.write(new Blob([finalHtml],{type:'text/html'}));
@@ -1419,8 +1424,8 @@ Returnează DOAR JSON-ul, nimic altceva.`;
 
     barFill.style.width='85%';
 
-    // Aplică patch
-    const newHtml=src.replace(patch.find, patch.replace);
+    // Aplică patch și dezescapează pentru salvare
+    const newHtml=__toSaveHtml__(src.replace(patch.find, patch.replace));
     barFill.style.width='100%';
     setStatus('working','💾 Salvez...');
 
