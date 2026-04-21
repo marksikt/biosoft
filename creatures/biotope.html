@@ -1199,117 +1199,169 @@ async function reprogramBiotope(){
   const bar     = document.getElementById('reprog-bar');
   const barFill = document.getElementById('reprog-bar-fill');
 
-  if(!prompt){status.className='err';status.textContent='⚠ Scrie o instrucțiune mai întâi.';return;}
+  if(!prompt){setStatus('err','⚠ Scrie o instrucțiune mai întâi.');return;}
   const key=localStorage.getItem('ant_key');
-  if(!key){status.className='err';status.textContent='⚠ Nicio cheie API. Introdu sk-ant-… în footer.';return;}
+  if(!key){setStatus('err','⚠ Nicio cheie API.');return;}
 
-  // UI — start
-  btn.disabled=true;
-  bar.style.display='block';barFill.style.width='0%';
-  preview.style.display='none';
-  setStatus('working','⏳ Trimit codul la Claude...');
+  btn.disabled=true;preview.style.display='none';
+  bar.style.display='block';barFill.style.width='5%';
+  setStatus('working','⏳ Se trimite codul...');
 
-  // Animează bara de progres
-  let prog=0;
-  const tick=setInterval(()=>{prog=Math.min(prog+Math.random()*8,88);barFill.style.width=prog+'%';},400);
+  // Sursă curată
+  let src=document.documentElement.outerHTML;
+  src=src.replace(/<script id="__biostate__">[\s\S]*?<\/script>/i,'');
+
+  const SYSTEM=`Ești expert în HTML/CSS/JavaScript vanilla.
+Primești codul sursă complet al unui fișier HTML interactiv.
+Aplică EXACT modificarea cerută, păstrând tot restul identic.
+Returnează DOAR codul HTML complet, fără explicații, fără markdown, fără backticks.
+Începe cu <!DOCTYPE html> și termină cu </html>.`;
+
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),180000); // 3 min max
 
   try{
-    // Codul sursă curent — curăță orice __BIOSTATE__ injectat anterior
-    let src = document.documentElement.outerHTML;
-    src = src.replace(/<script id="__biostate__">[\s\S]*?<\/script>/i,'');
-
-    const SYSTEM=`Ești un expert în HTML, CSS și JavaScript vanilla.
-Vei primi codul sursă complet al unui fișier HTML interactiv (un ecosistem de amoebe vii).
-Aplică EXACT modificarea cerută de utilizator, păstrând TOT restul codului identic.
-Returnează DOAR codul HTML complet, fără explicații, fără markdown, fără backticks.
-Fișierul trebuie să înceapă cu <!DOCTYPE html> și să se termine cu </html>.
-NU adăuga comentarii despre ce ai modificat. Returnează cod funcțional direct.`;
-
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
+      signal:controller.signal,
       headers:{
         'Content-Type':'application/json',
         'x-api-key':key,
         'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
+        'anthropic-dangerous-direct-browser-access':'true',
+        'anthropic-beta':'output-128k-2025-02-19'
       },
       body:JSON.stringify({
         model,
-        max_tokens:16000,
+        max_tokens:32000,
+        stream:true,
         system:SYSTEM,
-        messages:[{role:'user',content:`Codul sursă:\n\n${src}\n\n---\nModificare cerută: ${prompt}`}]
+        messages:[{role:'user',content:`Codul sursă:\n\n${src}\n\n---\nModificare: ${prompt}`}]
       })
     });
 
-    clearInterval(tick);
-
+    clearTimeout(timeout);
     if(!r.ok){
       const err=await r.json().catch(()=>({}));
-      throw new Error(`API ${r.status}: ${err?.error?.message??'eroare necunoscută'}`);
+      throw new Error(`API ${r.status}: ${err?.error?.message??'eroare'}`);
     }
 
-    const data=await r.json();
-    const newHtml=data.content?.[0]?.text??'';
+    // Citim stream-ul SSE
+    setStatus('working','⚡ Claude scrie codul...');
+    barFill.style.width='20%';
+
+    const reader=r.body.getReader();
+    const decoder=new TextDecoder();
+    let accumulated='';
+    let tokenCount=0;
+
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      const chunk=decoder.decode(value,{stream:true});
+      const lines=chunk.split('\n');
+      for(const line of lines){
+        if(!line.startsWith('data:'))continue;
+        const data=line.slice(5).trim();
+        if(data==='[DONE]')break;
+        try{
+          const ev=JSON.parse(data);
+          if(ev.type==='content_block_delta'&&ev.delta?.text){
+            accumulated+=ev.delta.text;
+            tokenCount++;
+            // Update progres bazat pe dimensiunea acumulată vs sursă
+            const pct=Math.min(20+Math.round((accumulated.length/src.length)*70),90);
+            barFill.style.width=pct+'%';
+            // Preview live — ultimele 80 caractere semnificative
+            if(tokenCount%30===0){
+              const lastLine=accumulated.split('\n').filter(l=>l.trim()).slice(-1)[0]||'';
+              setStatus('working',`⚡ ${Math.round(accumulated.length/100)/10}KB generat...`);
+            }
+          }
+          if(ev.type==='message_stop')break;
+        }catch(e){}
+      }
+    }
+
+    barFill.style.width='95%';
 
     // Validare
+    const newHtml=accumulated.trim();
     if(!newHtml.includes('<!DOCTYPE')||!newHtml.includes('</html>')){
-      throw new Error('Răspunsul nu e HTML valid. Încearcă din nou sau simplifică instrucțiunea.');
+      // Încearcă să extragă HTML dacă e învelit în markdown
+      const match=newHtml.match(/<!DOCTYPE[\s\S]*<\/html>/i);
+      if(!match)throw new Error('Răspuns invalid. Încearcă Sonnet 4.6 sau simplifică instrucțiunea.');
+      accumulated=match[0];
     }
 
     barFill.style.width='100%';
-    setStatus('ok','✓ Cod generat. Previzualizare:');
+    setStatus('ok',`✓ ${Math.round(accumulated.length/1000)}KB generat. Aplici?`);
 
-    // Preview primele 2 rânduri semnificative de diferență
-    const firstChange=newHtml.split('\n').find(l=>l.trim()&&!src.includes(l.trim()))||'modificare detectată';
+    // Preview
+    const changedLine=accumulated.split('\n').find(l=>l.trim()&&!src.includes(l.trim()))||'modificare OK';
     preview.style.display='block';
-    preview.textContent=firstChange.trim().slice(0,120)+'…';
+    preview.innerHTML='';
+    const previewText=document.createElement('div');
+    previewText.textContent=changedLine.trim().slice(0,110)+(changedLine.length>110?'…':'');
+    preview.appendChild(previewText);
 
-    // Buton confirmare
+    // Butoane confirmare
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;gap:5px;margin-top:6px';
     const confirmBtn=document.createElement('button');
-    confirmBtn.textContent='✓ APLICĂ ȘI REÎNCARCĂ';
-    confirmBtn.style.cssText='margin-top:7px;width:100%;background:rgba(46,204,154,.12);border:1px solid var(--glow);color:var(--glow);font-family:var(--font);font-size:11px;padding:5px;border-radius:3px;cursor:pointer;text-transform:uppercase;letter-spacing:.08em';
+    confirmBtn.textContent='✓ APLICĂ';
+    confirmBtn.style.cssText='flex:1;background:rgba(46,204,154,.12);border:1px solid var(--glow);color:var(--glow);font-family:var(--font);font-size:11px;padding:5px;border-radius:3px;cursor:pointer;text-transform:uppercase';
     const cancelBtn=document.createElement('button');
-    cancelBtn.textContent='✕ ANULEAZĂ';
-    cancelBtn.style.cssText='margin-top:4px;width:100%;background:none;border:1px solid rgba(255,255,255,.1);color:var(--dim);font-family:var(--font);font-size:11px;padding:4px;border-radius:3px;cursor:pointer;text-transform:uppercase;letter-spacing:.08em';
+    cancelBtn.textContent='✕';
+    cancelBtn.style.cssText='background:none;border:1px solid rgba(255,255,255,.1);color:var(--dim);font-family:var(--font);font-size:11px;padding:5px 10px;border-radius:3px;cursor:pointer';
 
-    preview.appendChild(document.createElement('br'));
-    preview.appendChild(confirmBtn);
-    preview.appendChild(cancelBtn);
+    row.appendChild(confirmBtn);row.appendChild(cancelBtn);
+    preview.appendChild(row);
+
+    const finalHtml=accumulated;
 
     confirmBtn.onclick=async()=>{
-      setStatus('working','💾 Salvez și reîncarc...');
+      setStatus('working','💾 Salvez...');
       try{
         if(fsFileHandle){
-          const writable=await fsFileHandle.createWritable();
-          await writable.write(new Blob([newHtml],{type:'text/html'}));
-          await writable.close();
+          const w=await fsFileHandle.createWritable();
+          await w.write(new Blob([finalHtml],{type:'text/html'}));
+          await w.close();
           setStatus('ok','✓ Salvat! Se reîncarcă...');
-          setTimeout(()=>location.reload(),800);
+          setTimeout(()=>location.reload(),700);
         } else {
-          // Fără file handle — descarcă
-          const blob=new Blob([newHtml],{type:'text/html'});
-          const a=document.createElement('a');
-          a.href=URL.createObjectURL(blob);
-          a.download='biotope_reprogramat.html';
-          a.click();
-          setStatus('ok','✓ Descărcat. Înlocuiește fișierul manual.');
+          // Nu avem handle — încearcă să-l obținem acum
+          try{
+            fsFileHandle=await window.showSaveFilePicker({
+              suggestedName:'biotope.html',
+              types:[{description:'HTML',accept:{'text/html':['.html']}}]
+            });
+            const w=await fsFileHandle.createWritable();
+            await w.write(new Blob([finalHtml],{type:'text/html'}));
+            await w.close();
+            setStatus('ok','✓ Salvat! Se reîncarcă...');
+            setTimeout(()=>location.reload(),700);
+          }catch(e2){
+            // Fallback descărcare
+            const a=document.createElement('a');
+            a.href=URL.createObjectURL(new Blob([finalHtml],{type:'text/html'}));
+            a.download='biotope_nou.html';a.click();
+            setStatus('ok','✓ Descărcat ca biotope_nou.html');
+          }
         }
       }catch(e){setStatus('err','✗ '+e.message);}
     };
-
     cancelBtn.onclick=()=>{
-      preview.style.display='none';
-      bar.style.display='none';
-      barFill.style.width='0%';
-      btn.disabled=false;
+      preview.style.display='none';bar.style.display='none';
+      barFill.style.width='0%';btn.disabled=false;
       status.className='';status.textContent='';
     };
 
   }catch(e){
-    clearInterval(tick);
-    barFill.style.width='0%';
-    bar.style.display='none';
-    setStatus('err','✗ '+e.message);
+    clearTimeout(timeout);
+    bar.style.display='none';barFill.style.width='0%';
+    if(e.name==='AbortError') setStatus('err','✗ Timeout — fișierul e prea mare pentru Haiku. Încearcă Sonnet.');
+    else setStatus('err','✗ '+e.message);
     btn.disabled=false;
   }
 
