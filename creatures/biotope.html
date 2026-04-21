@@ -1387,53 +1387,28 @@ Returnează DOAR JSON-ul, nimic altceva.`;
     // Aplică patch
     const newHtml=src.replace(patch.find, patch.replace);
     barFill.style.width='100%';
+    setStatus('working','💾 Salvez...');
 
-    // Preview
-    setStatus('ok','✓ Patch generat. Aplici?');
-    preview.style.display='block';
-    preview.innerHTML='';
-    const diff=document.createElement('div');
-    diff.style.cssText='font-size:10px;line-height:1.5';
-    diff.innerHTML=`<span style="color:#e74c3c">− ${patch.find.slice(0,60).replace(/</g,'&lt;')}…</span><br>`+
-                   `<span style="color:#2ecc71">+ ${patch.replace.slice(0,60).replace(/</g,'&lt;')}…</span>`;
-    preview.appendChild(diff);
-
-    const row=document.createElement('div');
-    row.style.cssText='display:flex;gap:5px;margin-top:6px';
-    const confirmBtn=document.createElement('button');
-    confirmBtn.textContent='✓ APLICĂ';
-    confirmBtn.style.cssText='flex:1;background:rgba(46,204,154,.12);border:1px solid var(--glow);color:var(--glow);font-family:var(--font);font-size:11px;padding:5px;border-radius:3px;cursor:pointer;text-transform:uppercase';
-    const cancelBtn=document.createElement('button');
-    cancelBtn.textContent='✕';
-    cancelBtn.style.cssText='background:none;border:1px solid rgba(255,255,255,.1);color:var(--dim);font-family:var(--font);font-size:11px;padding:5px 10px;border-radius:3px;cursor:pointer';
-    row.appendChild(confirmBtn);row.appendChild(cancelBtn);
-    preview.appendChild(row);
-
-    confirmBtn.onclick=async()=>{
-      setStatus('working','💾 Salvez...');
-      try{
-        if(!fsFileHandle){
-          fsFileHandle=await window.showSaveFilePicker({
-            suggestedName:'biotope.html',
-            types:[{description:'HTML',accept:{'text/html':['.html']}}]
-          });
-        }
-        const w=await fsFileHandle.createWritable();
-        await w.write(new Blob([newHtml],{type:'text/html'}));
-        await w.close();
-        setStatus('ok','✓ Salvat! Se reîncarcă...');
-        setTimeout(()=>location.reload(),700);
-      }catch(e){
-        if(e.name==='AbortError'){resetReprog();return;}
-        // Fallback descărcare
-        const a=document.createElement('a');
-        a.href=URL.createObjectURL(new Blob([newHtml],{type:'text/html'}));
-        a.download='biotope_nou.html';a.click();
-        setStatus('ok','✓ Descărcat ca biotope_nou.html');
-        resetReprog();
+    try{
+      if(!fsFileHandle){
+        fsFileHandle=await window.showSaveFilePicker({
+          suggestedName:'biotope.html',
+          types:[{description:'HTML',accept:{'text/html':['.html']}}]
+        });
       }
-    };
-    cancelBtn.onclick=resetReprog;
+      const w=await fsFileHandle.createWritable();
+      await w.write(new Blob([newHtml],{type:'text/html'}));
+      await w.close();
+      setStatus('ok','✓ Aplicat! Se reîncarcă...');
+      setTimeout(()=>location.reload(),700);
+    }catch(e){
+      if(e.name==='AbortError'){resetReprog();return;}
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob([newHtml],{type:'text/html'}));
+      a.download='biotope_nou.html';a.click();
+      setStatus('ok','✓ Descărcat ca biotope_nou.html');
+      resetReprog();
+    }
 
   }catch(e){
     clearTimeout(timeout);
