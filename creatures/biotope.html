@@ -312,11 +312,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 </div>
 <script>
 'use strict';
-// ── Sursă originală — capturată ÎNAINTE de orice modificare ──
-// Escapăm </script> ca să nu trunchieze fișierul la salvare
+// ── Sursă originală — capturată la boot, tag-uri escape-uite ──
+const __CLOSE_SCRIPT__ = '</' + 'script>';
 const __ORIGINAL_SRC__ = (()=>{
   const raw = document.documentElement.outerHTML;
-  return raw.replace(/<\/script>/gi, '<\\/script>');
+  return raw.split(__CLOSE_SCRIPT__).join('<\\/' + 'script>');
 })();
 
 // ── Dimensiuni CSS → pixeli ───────────────────────────────
