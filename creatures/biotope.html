@@ -679,7 +679,77 @@ function fossilize(id){
 }
 
 // ── Mediu ─────────────────────────────────────────────────
-// ── Canvas FX ─────────────────────────────────────────────
+// ── Sunet Web Audio ───────────────────────────────────────
+let audioCtx = null;
+function getAudio(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+
+// Geamăt de plăcere — ton cald, glissando ascendent, vibrato
+function soundPleasure(){
+  const ctx=getAudio();
+  const count=Math.min(B.creatures.size,6);
+  [...B.creatures.entries()].filter(([,c])=>c.status==='alive').slice(0,count).forEach(([,c],i)=>{
+    setTimeout(()=>{
+      const h=c.genome.traits.hue;
+      const baseFreq=120+h*0.8; // fiecare amobă la frecvența ei
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      const vibrato=ctx.createOscillator();
+      const vibratoGain=ctx.createGain();
+
+      vibrato.frequency.value=5+Math.random()*2;
+      vibratoGain.gain.value=4;
+      vibrato.connect(vibratoGain);
+      vibratoGain.connect(osc.frequency);
+
+      osc.type='sine';
+      osc.frequency.setValueAtTime(baseFreq,ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(baseFreq*1.35,ctx.currentTime+0.6);
+      osc.frequency.linearRampToValueAtTime(baseFreq*1.2,ctx.currentTime+1.2);
+
+      gain.gain.setValueAtTime(0,ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.12,ctx.currentTime+0.15);
+      gain.gain.linearRampToValueAtTime(0.08,ctx.currentTime+0.8);
+      gain.gain.linearRampToValueAtTime(0,ctx.currentTime+1.4);
+
+      osc.connect(gain); gain.connect(ctx.destination);
+      vibrato.start(ctx.currentTime); osc.start(ctx.currentTime);
+      vibrato.stop(ctx.currentTime+1.4); osc.stop(ctx.currentTime+1.4);
+    }, i*120+Math.random()*80);
+  });
+}
+
+// Chităit de frică — oscilator rapid, frecvență înaltă neregulată
+function soundFear(){
+  const ctx=getAudio();
+  const count=Math.min(B.creatures.size,6);
+  [...B.creatures.entries()].filter(([,c])=>c.status==='alive').slice(0,count).forEach(([,c],i)=>{
+    setTimeout(()=>{
+      const baseFreq=800+Math.random()*600;
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      const dist=ctx.createWaveShaper();
+
+      // distorsie ușoară pentru chităit
+      const curve=new Float32Array(256);
+      for(let j=0;j<256;j++){const x=j*2/256-1; curve[j]=x*(Math.abs(x)+0.3)/(x*x+0.3+1);}
+      dist.curve=curve;
+
+      osc.type='sawtooth';
+      osc.frequency.setValueAtTime(baseFreq,ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(baseFreq*0.4,ctx.currentTime+0.08);
+      osc.frequency.linearRampToValueAtTime(baseFreq*1.2,ctx.currentTime+0.16);
+      osc.frequency.linearRampToValueAtTime(baseFreq*0.3,ctx.currentTime+0.28);
+      osc.frequency.linearRampToValueAtTime(baseFreq*0.8,ctx.currentTime+0.4);
+
+      gain.gain.setValueAtTime(0.13,ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.09,ctx.currentTime+0.2);
+      gain.gain.linearRampToValueAtTime(0,ctx.currentTime+0.5);
+
+      osc.connect(dist); dist.connect(gain); gain.connect(ctx.destination);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.5);
+    }, i*90+Math.random()*60);
+  });
+}
 const FX = document.getElementById('fx-canvas');
 const CTX = FX.getContext('2d');
 let fxParticles = [];
@@ -788,12 +858,14 @@ function envFood(){
   B.creatures.forEach((c,id)=>{if(c.status==='alive'){addStimuli(id,3);addEntry(id,'Nutrienți absorbiți. Energie.','event');}});
   flashFtr('food');
   spawnCorn();
+  soundPleasure();
 }
 function envDanger(){
   nutrients=Math.max(0,nutrients-15);updateNutriUI();
   B.creatures.forEach((c,id)=>{if(c.status==='alive')creatureMutate(id);});
   flashFtr('danger');
   spawnBlood();
+  soundFear();
 }
 function flashFtr(t){const f=document.getElementById('footer');f.className='flash-'+t;setTimeout(()=>f.className='',1000);}
 
