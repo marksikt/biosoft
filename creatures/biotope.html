@@ -312,6 +312,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 </div>
 <script>
 'use strict';
+// ── Sursă originală — capturată ÎNAINTE de orice modificare ──
+// Escapăm </script> ca să nu trunchieze fișierul la salvare
+const __ORIGINAL_SRC__ = (()=>{
+  const raw = document.documentElement.outerHTML;
+  return raw.replace(/<\/script>/gi, '<\\/script>');
+})();
 
 // ── Dimensiuni CSS → pixeli ───────────────────────────────
 let AMSIZE = 170, LOG_W = 454;
@@ -1292,8 +1298,8 @@ async function autosaveFile(){
       });
     }
     btn.textContent='💾 SALVEZ...';btn.className='';
-    // Citește conținutul curent al paginii
-    const html=document.documentElement.outerHTML;
+    // Folosim sursa originală escapată, nu outerHTML curent
+    const html=__ORIGINAL_SRC__;
     // Injectează starea coloniei ca script inline de boot
     const stateScript=`<script id="__biostate__">window.__BIOSTATE__=${JSON.stringify(exportState())};<\/script>`;
     const finalHtml=html.replace(/<script id="__biostate__">[\s\S]*?<\/script>/,'')
@@ -1352,8 +1358,9 @@ async function reprogramBiotope(){
   bar.style.display='block';barFill.style.width='8%';
   setStatus('working','⏳ Analizez codul...');
 
-  let src=document.documentElement.outerHTML;
-  src=src.replace(/<script id="__biostate__">[\s\S]*?<\/script>/i,'');
+  // Sursă curată — escapată, fără __BIOSTATE__
+  let src=__ORIGINAL_SRC__;
+  src=src.replace(/<script id="__biostate__">[\s\S]*?<\\\/script>/i,'');
 
   // Extragem doar CSS + primele funcții JS relevante (max ~8000 chars)
   const cssMatch=src.match(/<style>([\s\S]*?)<\/style>/);
