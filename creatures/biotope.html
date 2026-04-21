@@ -299,6 +299,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
     </div>
     <button title="Nutrienți la toate abeomas (+3 stimuli)" onclick="envFood()">+ NUTRIENȚI</button>
     <button title="Pericol: mutație forțată" onclick="envDanger()">⚡ PERICOL</button>
+    <button title="Amobele te salută vocal" onclick="greetMaster()" style="color:#f1c40f;border-color:rgba(241,196,15,.4)">🎙 SALUT</button>
     <div id="key-wrap">
       <span>API:</span>
       <input type="password" id="api-key" placeholder="sk-ant-…">
@@ -584,8 +585,8 @@ async function creatureSpeak(id){
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:100,system:sys,
         messages:[{role:'user',content:'Ce observi acum?'}]})});
     if(r.ok){const d=await r.json();const t=d.content?.[0]?.text;if(t){setAiMode(c,'api');addEntry(id,t,'speech');
-      // Adaugă în jurnal cu timestamp
       addJournalEntry(c,t);
+      speak(t, c.genome); // voce
       return;}}
   }catch(e){}}
   // Încearcă Ollama local
@@ -679,7 +680,51 @@ function fossilize(id){
 }
 
 // ── Mediu ─────────────────────────────────────────────────
-// ── Sunet Web Audio ───────────────────────────────────────
+// ── Voce — Web Speech API ─────────────────────────────────
+let voices = [];
+function loadVoices(){
+  voices = speechSynthesis.getVoices();
+  // Retry până sunt încărcate
+  if(!voices.length) setTimeout(loadVoices, 200);
+}
+loadVoices();
+if(speechSynthesis.onvoiceschanged !== undefined)
+  speechSynthesis.onvoiceschanged = loadVoices;
+
+function speak(text, genome){
+  if(!window.speechSynthesis) return;
+  const utt = new SpeechSynthesisUtterance(text);
+  // Alege voce bazată pe hue — varietate de voci
+  const ro = voices.filter(v => v.lang.startsWith('ro'));
+  const any = voices.filter(v => v.lang.startsWith('en')||v.lang.startsWith('fr')||v.lang.startsWith('de'));
+  const pool = ro.length ? ro : any.length ? any : voices;
+  if(pool.length) utt.voice = pool[Math.floor(genome.traits.hue / 360 * pool.length) % pool.length];
+  // Personalitate sonoră din genom
+  utt.pitch  = 0.6 + genome.traits.curiosity * 1.4;   // curios = mai înalt
+  utt.rate   = 0.7 + genome.traits.metabolism * 0.8;  // metabolism = mai rapid
+  utt.volume = 0.85;
+  utt.lang   = ro.length ? 'ro-RO' : 'en-US';
+  speechSynthesis.speak(utt);
+  return utt;
+}
+
+function greetMaster(){
+  const alive = [...B.creatures.values()].filter(c => c.status==='alive');
+  if(!alive.length) return;
+  speechSynthesis.cancel(); // oprește ce vorbea
+  const greetings = [
+    'Salut Maestre!', 'Bună ziua, Maestre.', 'Salutare, Stăpâne.',
+    'Maestre, te salut!', 'Bine ai venit, Maestru.',
+    'Maestre, membrana mea vibrează de bucurie.'
+  ];
+  alive.forEach((c, i) => {
+    setTimeout(() => {
+      const txt = greetings[Math.floor(Math.random()*greetings.length)];
+      speak(txt, c.genome);
+      addEntry(c.genome.id, `🔊 "${txt}"`, 'speech');
+    }, i * 900 + Math.random()*200);
+  });
+}
 let audioCtx = null;
 function getAudio(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
 
