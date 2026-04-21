@@ -180,8 +180,29 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 #footer.flash-danger{animation:flash-danger .8s ease}
 
 /* canvas animații */
-#fx-canvas{position:fixed;inset:0;pointer-events:none;z-index:999;
-  width:100%;height:100%}
+#fx-canvas{position:fixed;inset:0;pointer-events:none;z-index:999;width:100%;height:100%}
+/* trail canvas — sub lake, deasupra background */
+#trail-canvas{position:absolute;inset:0;pointer-events:none;z-index:2;width:100%;height:100%}
+
+/* quorum glow — amobe aproape */
+.aunit.quorum .ablob{
+  filter:drop-shadow(0 0 18px hsla(var(--chue,150),100%,75%,.7))
+         drop-shadow(0 0 6px rgba(255,255,255,.4))}
+
+/* jurnal */
+.alog-journal{border-top:1px solid var(--border);padding:6px 10px;max-height:120px;overflow-y:auto}
+.alog-journal-title{font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
+.alog-journal-entry{font-size:11px;color:#c8e8d8;line-height:1.5;margin-bottom:4px;font-style:italic;
+  border-left:2px solid hsla(var(--chue,150),55%,48%,.4);padding-left:6px}
+
+/* predator flash */
+@keyframes devour{0%{opacity:1}30%{opacity:0;transform:scale(1.4)}100%{opacity:0;transform:scale(0)}}
+.aunit.being-devoured{animation:devour .8s ease forwards!important}
+
+/* autosave indicator */
+#autosave-btn{font-size:9px;color:var(--dim);border-color:rgba(255,255,255,.08)}
+#autosave-btn.saved{color:#2ecc71;border-color:rgba(46,204,154,.3)}
+#autosave-btn.error{color:#e74c3c}
 
 /* ping */
 #ping-btn{color:var(--dim)}
@@ -204,13 +225,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 </head>
 <body>
 <canvas id="fx-canvas"></canvas>
+<canvas id="trail-canvas"></canvas>
 <div id="ping-toast"></div>
 <div id="app">
   <aside id="sidebar">
-    <div id="sb-head"><h1>◉ BIOTOP</h1><div id="sb-sub">lac abeomas</div></div>
+    <div id="sb-head">
+      <h1>◉ BIOTOP</h1>
+      <div id="sb-sub">lac abeomas</div>
+      <button id="autosave-btn" onclick="autosaveFile()" style="margin-top:8px;width:100%;padding:4px 0;border-radius:3px;cursor:pointer;font-family:var(--font);font-size:9px;text-transform:uppercase;letter-spacing:.1em;background:none;border:1px solid rgba(255,255,255,.08);color:var(--dim);transition:all .3s" title="Salvează colonia în fișierul biotope.html">💾 AUTOSAVE ÎN FIȘIER</button>
+    </div>
     <div id="family-list"></div>
   </aside>
-  <main id="lake"></main>
+  <main id="lake"><canvas id="trail-canvas" style="position:absolute;inset:0;pointer-events:none;z-index:2;width:100%;height:100%"></canvas></main>
   <footer id="footer">
     <div class="stat" title="Generația maximă">GEN <span class="val" id="s-gen">0</span></div>
     <span class="stat-sep">·</span>
@@ -388,8 +414,15 @@ function createUnit(genome){
   const bBirth=mkB('NAȘTE','Naştere (20 stimuli)');bBirth.disabled=true;
   acts.appendChild(bSpeak);acts.appendChild(bMut);acts.appendChild(bBirth);
 
+  // 7. Jurnal Claude
+  const journalDiv=document.createElement('div');journalDiv.className='alog-journal';
+  journalDiv.style.setProperty('--chue',h);
+  const journalTitle=document.createElement('div');journalTitle.className='alog-journal-title';journalTitle.textContent='◈ jurnal';
+  const journalEntries=document.createElement('div');journalEntries.id='journal-'+id;
+  journalDiv.appendChild(journalTitle);journalDiv.appendChild(journalEntries);
+
   log.appendChild(techBar);log.appendChild(cRow);log.appendChild(nameDiv);
-  log.appendChild(stimRow);log.appendChild(entries);log.appendChild(acts);
+  log.appendChild(stimRow);log.appendChild(entries);log.appendChild(acts);log.appendChild(journalDiv);
 
   const unit=document.createElement('div');unit.className='aunit';unit.id='au-'+id;
   unit.style.transform='translate(0px,0px)';
@@ -409,8 +442,8 @@ function createUnit(genome){
   return{genome,status:'alive',x:0,y:0,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,
     phase:Math.random()*Math.PI*2,el:unit,svg,
     s:{body,mem,nuc,nuci,nucg,org},
-    entries,stimN,sfill,btnBirth:bBirth,tbMut,aiDot,aiLbl,
-    stimuli:0,childCount:0,speakBusy:false,speakMode:'reflex'};
+    entries,stimN,sfill,btnBirth:bBirth,tbMut,aiDot,aiLbl,journalEntries,
+    stimuli:0,childCount:0,speakBusy:false,speakMode:'reflex',journal:[]};
 }
 
 // ── Spawn ─────────────────────────────────────────────────
@@ -497,10 +530,14 @@ async function creatureSpeak(id){
   if(key){try{
     const sys=`Ești ${c.genome.name}, o abeomă din generația ${c.genome.generation}. Mutații: ${c.genome.mutations.join(', ')||'niciuna'}. Metabolism: ${c.genome.traits.metabolism.toFixed(2)}, curiozitate: ${c.genome.traits.curiosity.toFixed(2)}. Răspunde ca o conștiință celulară vie: poetic, scurt, biologic exact. Max 1-2 propoziții. Răspunde în română.`;
     const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01',
+               'anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:100,system:sys,
         messages:[{role:'user',content:'Ce observi acum?'}]})});
-    if(r.ok){const d=await r.json();const t=d.content?.[0]?.text;if(t){setAiMode(c,'api');addEntry(id,t,'speech');return;}}
+    if(r.ok){const d=await r.json();const t=d.content?.[0]?.text;if(t){setAiMode(c,'api');addEntry(id,t,'speech');
+      // Adaugă în jurnal cu timestamp
+      addJournalEntry(c,t);
+      return;}}
   }catch(e){}}
   // Încearcă Ollama local
   try{
@@ -512,6 +549,42 @@ async function creatureSpeak(id){
   }catch(e){}
   setAiMode(c,'reflex');
   addEntry(id,REFLEXE[Math.floor(Math.random()*REFLEXE.length)],'speech');
+}
+
+// ── Jurnal Claude ─────────────────────────────────────────
+function addJournalEntry(c,text){
+  if(!c.journalEntries)return;
+  const d=new Date();
+  const ts=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  const entry=document.createElement('div');entry.className='alog-journal-entry';
+  entry.textContent=`${ts} — ${text}`;
+  c.journalEntries.insertBefore(entry,c.journalEntries.firstChild);
+  c.journal=c.journal||[];
+  c.journal.unshift({ts:d.toISOString(),text});
+  if(c.journal.length>20)c.journal.pop();
+  // Scrie periodic un rezumat de zi
+  if(c.journal.length%5===0)scheduleJournalSummary(c);
+  save();
+}
+
+async function scheduleJournalSummary(c){
+  const key=localStorage.getItem('ant_key');if(!key)return;
+  try{
+    const entries=c.journal.slice(0,5).map(e=>e.text).join(' | ');
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01',
+               'anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:80,
+        messages:[{role:'user',content:`Rezumă în 1 propoziție poetică scurtă în română ziua acestei celule: ${entries}`}]})});
+    if(r.ok){const d=await r.json();const t=d.content?.[0]?.text;
+      if(t&&c.journalEntries){
+        const summ=document.createElement('div');
+        summ.className='alog-journal-entry';
+        summ.style.cssText='border-left-color:#f1c40f55;color:#f1c40f;font-weight:bold';
+        summ.textContent=`✦ ${t}`;
+        c.journalEntries.insertBefore(summ,c.journalEntries.firstChild);
+      }}
+  }catch(e){}
 }
 
 // ── Mutație ───────────────────────────────────────────────
@@ -778,6 +851,33 @@ function load(){
     return B.creatures.size>0;
   }catch(e){console.error('load',e);return false;}
 }
+function loadFromState(data){
+  B.nextNum=data.nextNum||1;B.maxGen=data.maxGen||0;
+  nutrients=data.nutrients??50;
+  data.creatures.forEach(item=>{
+    const c=spawn(item.genome,{x:item.x||0,y:item.y||0,vx:item.vx,vy:item.vy,phase:item.phase});
+    c.stimuli=item.stimuli||0;c.childCount=item.childCount||0;
+    c.genome.stimuli=c.stimuli;c.genome.childCount=c.childCount;
+    c.journal=item.journal||[];
+    // Redă jurnalul în UI
+    if(c.journalEntries&&c.journal.length){
+      c.journal.slice(0,5).forEach(e=>{
+        const el=document.createElement('div');el.className='alog-journal-entry';
+        el.textContent=`${e.ts?.slice(11,16)||''} — ${e.text}`;
+        c.journalEntries.appendChild(el);
+      });
+    }
+    updateStimUI(item.id);
+    if(item.status==='fossil'){
+      c.status='fossil';c.genome.died=item.genome.died;
+      c.el.classList.add('fossil');
+      const logEl=c.el.querySelector('.alog');if(logEl)logEl.remove();
+      const lbl=document.createElement('div');lbl.className='afossil-label';
+      lbl.textContent=`☠ ${item.genome.name} · gen${item.genome.generation}`;c.el.appendChild(lbl);
+    }
+  });
+}
+
 function resetBiotope(){if(!confirm('Șterge toată colonia? Ireversibil.'))return;localStorage.removeItem('biotop_v3');location.reload();}
 
 // ── Sidebar: arbore cu +/- ────────────────────────────────
@@ -863,13 +963,169 @@ function drift(c){
   c.el.style.transform=`translate(${Math.round(c.x-AMSIZE/2)}px,${Math.round(c.y-AMSIZE/2)}px)`;
 }
 
+// ── Trail canvas ──────────────────────────────────────────
+const TRAIL = document.getElementById('trail-canvas');
+const TCTX  = TRAIL.getContext('2d');
+function resizeTrail(){TRAIL.width=LAKE.offsetWidth;TRAIL.height=LAKE.offsetHeight;}
+
+function drawTrails(){
+  // Fade lent
+  TCTX.globalCompositeOperation='destination-out';
+  TCTX.fillStyle='rgba(0,0,0,0.04)';
+  TCTX.fillRect(0,0,TRAIL.width,TRAIL.height);
+  TCTX.globalCompositeOperation='source-over';
+  B.creatures.forEach(c=>{
+    if(c.status!=='alive')return;
+    const h=c.genome.traits.hue;
+    // Punct luminos la poziția curentă
+    const grd=TCTX.createRadialGradient(c.x,c.y,0,c.x,c.y,AMSIZE*.18);
+    grd.addColorStop(0,`hsla(${h},70%,65%,0.18)`);
+    grd.addColorStop(1,`hsla(${h},60%,50%,0)`);
+    TCTX.fillStyle=grd;
+    TCTX.beginPath();TCTX.arc(c.x,c.y,AMSIZE*.18,0,Math.PI*2);TCTX.fill();
+  });
+}
+
+// ── Predator/Prey ─────────────────────────────────────────
+const PREDATOR_RANGE = 1.4; // ori AMSIZE
+const PREDATOR_COOLDOWN = 12000; // ms între mese
+const predatorCooldowns = new Map();
+
+function checkPredation(){
+  const alive=[...B.creatures.entries()].filter(([,c])=>c.status==='alive');
+  for(const [id1,c1] of alive){
+    // Poate fi prădător doar dacă are fagocitoză
+    if(!c1.genome.mutations.includes('fagocitoză'))continue;
+    if(predatorCooldowns.has(id1)&&Date.now()-predatorCooldowns.get(id1)<PREDATOR_COOLDOWN)continue;
+    for(const [id2,c2] of alive){
+      if(id1===id2)continue;
+      const dx=c1.x-c2.x,dy=c1.y-c2.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<AMSIZE*PREDATOR_RANGE){
+        // Prădătorul e mai mare sau mai venerabil
+        if(c1.genome.traits.size>=c2.genome.traits.size*.85||c1.genome.generation<c2.genome.generation){
+          devour(id1,id2);
+          predatorCooldowns.set(id1,Date.now());
+          break;
+        }
+      }
+    }
+  }
+}
+
+function devour(predId,preyId){
+  const pred=B.creatures.get(predId),prey=B.creatures.get(preyId);
+  if(!pred||!prey)return;
+  prey.el.classList.add('being-devoured');
+  addEntry(predId,`⬤ a fagocitat ${prey.genome.name}. Energie absorbită.`,'event');
+  addStimuli(predId,8);
+  // Spawn particule de consum
+  spawnDevourFX(prey.x,prey.y,prey.genome.traits.hue);
+  setTimeout(()=>{fossilize(preyId);},800);
+}
+
+function spawnDevourFX(x,y,hue){
+  const lakeRect=LAKE.getBoundingClientRect();
+  const ax=lakeRect.left+x,ay=lakeRect.top+y;
+  for(let i=0;i<20;i++){
+    const a=Math.random()*Math.PI*2;
+    fxParticles.push({type:'corn',x:ax,y:ay,
+      vx:Math.cos(a)*(2+Math.random()*4),vy:Math.sin(a)*(2+Math.random()*4),
+      gravity:0.1,drag:0.96,rotation:Math.random()*Math.PI*2,rotSpeed:(Math.random()-.5)*.2,
+      rx:3+Math.random()*3,ry:2+Math.random()*2,
+      color:`hsla(${hue},60%,60%,0.9)`,life:1,decay:0.02+Math.random()*0.02});
+  }
+}
+
+// ── Quorum sensing ────────────────────────────────────────
+const QUORUM_RANGE = 1.8; // ori AMSIZE
+const QUORUM_MIN   = 3;   // nr minim de vecini
+
+function checkQuorum(){
+  const alive=[...B.creatures.entries()].filter(([,c])=>c.status==='alive');
+  alive.forEach(([id,c])=>{
+    const neighbors=alive.filter(([oid,oc])=>{
+      if(oid===id)return false;
+      const dx=c.x-oc.x,dy=c.y-oc.y;
+      return Math.sqrt(dx*dx+dy*dy)<AMSIZE*QUORUM_RANGE;
+    });
+    const inQuorum=neighbors.length>=QUORUM_MIN-1;
+    c.el.classList.toggle('quorum',inQuorum);
+    if(inQuorum&&!c.inQuorum){
+      c.inQuorum=true;
+      addEntry(id,'◈ quorum atins — rezonanță colectivă.','event');
+      addStimuli(id,2);
+      // Schimb de mutații cu vecinii
+      neighbors.forEach(([,nc])=>{
+        const theirMut=nc.genome.mutations.filter(m=>!c.genome.mutations.includes(m));
+        if(theirMut.length>0&&Math.random()<.35){
+          const shared=theirMut[Math.floor(Math.random()*theirMut.length)];
+          c.genome.mutations.push(shared);
+          addEntry(id,`◈ mutație preluată prin quorum: ${shared}`,'event');
+        }
+      });
+    } else if(!inQuorum){c.inQuorum=false;}
+  });
+}
+
 function animate(ts){
   B.creatures.forEach(c=>{
     if(c.status!=='alive'||!c.s?.body)return;
     const T=ts*.001*(.4+c.genome.traits.metabolism*.5)+c.phase;
     updateBlob(c,T);drift(c);
   });
+  drawTrails();
+  // Predare + quorum la interval
+  if(!animate._t||ts-animate._t>2000){
+    animate._t=ts;
+    checkPredation();
+    checkQuorum();
+  }
   requestAnimationFrame(animate);
+}
+
+// ── File System API — Autosave în fișier ─────────────────
+let fsFileHandle=null;
+
+async function autosaveFile(){
+  const btn=document.getElementById('autosave-btn');
+  try{
+    if(!fsFileHandle){
+      // Prima dată — user alege fișierul
+      fsFileHandle=await window.showSaveFilePicker({
+        suggestedName:'biotope.html',
+        types:[{description:'HTML',accept:{'text/html':['.html']}}]
+      });
+    }
+    btn.textContent='💾 SALVEZ...';btn.className='';
+    // Citește conținutul curent al paginii
+    const html=document.documentElement.outerHTML;
+    // Injectează starea coloniei ca script inline de boot
+    const stateScript=`<script id="__biostate__">window.__BIOSTATE__=${JSON.stringify(exportState())};<\/script>`;
+    const finalHtml=html.replace(/<script id="__biostate__">[\s\S]*?<\/script>/,'')
+                        .replace('</head>',stateScript+'</head>');
+    const writable=await fsFileHandle.createWritable();
+    await writable.write(new Blob([finalHtml],{type:'text/html'}));
+    await writable.close();
+    btn.textContent='✓ SALVAT';btn.className='saved';
+    setTimeout(()=>{btn.textContent='💾 AUTOSAVE ÎN FIȘIER';btn.className='';},3000);
+  }catch(e){
+    if(e.name==='AbortError')return;
+    btn.textContent='✗ EROARE';btn.className='error';
+    setTimeout(()=>{btn.textContent='💾 AUTOSAVE ÎN FIȘIER';btn.className='';},3000);
+  }
+}
+
+function exportState(){
+  return{
+    nextNum:B.nextNum,maxGen:B.maxGen,nutrients,
+    creatures:[...B.creatures.entries()].map(([id,c])=>({
+      id,genome:c.genome,status:c.status,
+      x:c.x,y:c.y,vx:c.vx,vy:c.vy,phase:c.phase,
+      childCount:c.childCount,stimuli:c.stimuli,
+      journal:c.journal||[]
+    }))
+  };
 }
 
 function buildLakeBg(){
@@ -887,16 +1143,19 @@ function buildLakeBg(){
 // ── Init ─────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{
   calcSizes();updateLakeSize();
-  window.addEventListener('resize',updateLakeSize);
+  resizeTrail();
+  window.addEventListener('resize',()=>{updateLakeSize();resizeTrail();});
   buildLakeBg();
   const key=localStorage.getItem('ant_key');if(key)document.getElementById('api-key').value=key;
-  if(!load()||B.creatures.size===0)spawnGen0();
+  // Încearcă să încarce starea injectată prin autosave
+  const injected=window.__BIOSTATE__;
+  let loaded=false;
+  if(injected){try{loadFromState(injected);loaded=true;}catch(e){}}
+  if(!loaded&&(!load()||B.creatures.size===0))spawnGen0();
   render();stats();updateNutriUI();
   requestAnimationFrame(animate);
   setInterval(stats,4000);
-  // Decay nutrienți
   setInterval(()=>{nutrients=Math.max(0,nutrients-1.5);updateNutriUI();},8000);
-  // Auto-vorbire
   setInterval(()=>{B.creatures.forEach((c,id)=>{if(c.status==='alive'&&Math.random()<.3)creatureSpeak(id);});},
     25000+Math.random()*20000);
 });
