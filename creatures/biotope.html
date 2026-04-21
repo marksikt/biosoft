@@ -15,20 +15,20 @@
   --font:'Courier New',monospace;
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
-  font-family:var(--font);font-size:12px;line-height:1.5}
+  font-family:var(--font);font-size:15px;line-height:1.5}
 #app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:1fr 44px;height:100vh}
 
 /* ── SIDEBAR ────────────────────────────────────────── */
 #sidebar{grid-row:1/2;border-right:1px solid var(--border);
   overflow-y:auto;display:flex;flex-direction:column}
 #sb-head{padding:14px 12px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
-#sb-head h1{font-size:11px;letter-spacing:.18em;color:var(--glow);text-transform:uppercase;font-weight:normal}
-#sb-sub{font-size:10px;color:var(--dim);margin-top:3px}
+#sb-head h1{font-size:14px;letter-spacing:.18em;color:var(--glow);text-transform:uppercase;font-weight:normal}
+#sb-sub{font-size:13px;color:var(--dim);margin-top:3px}
 #family-list{flex:1;padding:6px 4px;overflow-y:auto;display:flex;flex-direction:column}
 
 /* tree nodes */
 .tree-row{display:flex;align-items:flex-start;gap:2px;margin-bottom:2px}
-.tree-tog{flex-shrink:0;width:16px;text-align:center;font-size:10px;
+.tree-tog{flex-shrink:0;width:16px;text-align:center;font-size:13px;
   color:var(--dim);cursor:pointer;padding-top:7px;user-select:none;transition:color .1s}
 .tree-tog:hover{color:var(--glow)}
 .ccard{flex:1;min-width:0;padding:7px 9px 7px 8px;border-radius:5px;
@@ -40,11 +40,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .ccard.selected{background:rgba(255,255,255,.06);
   border-color:hsl(var(--chue,150),50%,38%);
   box-shadow:0 0 0 1px hsla(var(--chue,150),55%,48%,.35)}
-.cname{font-size:12px;font-weight:bold;color:var(--text);
+.cname{font-size:15px;font-weight:bold;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cmeta{font-size:10px;color:var(--dim);margin-top:1px;
+.cmeta{font-size:13px;color:var(--dim);margin-top:1px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cstatus{font-size:9px;position:absolute;top:6px;right:7px}
+.cstatus{font-size:12px;position:absolute;top:6px;right:7px}
 .cstatus.alive{color:var(--glow)}
 .cstatus.dead{color:var(--dim)}
 
@@ -74,7 +74,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .ablob:not(.aunit.selected .ablob):hover{
   filter:drop-shadow(0 0 10px hsla(var(--chue,150),65%,55%,.55))}
 
-.afossil-label{width:4.5cm;text-align:center;font-size:11px;
+.afossil-label{width:4.5cm;text-align:center;font-size:14px;
   color:var(--dim);margin-top:4px;letter-spacing:.04em}
 
 /* ── PANOU LOG (6 cm lăţime) ─────────────────────── */
@@ -87,7 +87,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 /* mini header tehnic */
 .alog-tech{display:flex;align-items:center;gap:6px;padding:6px 10px;
   border-bottom:1px solid var(--border);background:rgba(0,0,0,.18);
-  font-size:12px;color:var(--dim)}
+  font-size:15px;color:var(--dim)}
 .atb-gen{color:hsl(var(--chue,150),50%,55%);font-weight:bold}
 .atb-mut{color:var(--dim)}
 .atb-ai{display:flex;align-items:center;gap:4px;margin-left:auto}
@@ -95,7 +95,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .atb-ai-dot.api{background:#2ecc71}
 .atb-ai-dot.ollama{background:#f1c40f}
 .atb-ai-dot.reflex{background:#3a5060}
-.atb-ai-lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.atb-ai-lbl{font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
 
 /* input comentariu — în capul listei */
 .alog-comment{display:flex;gap:5px;padding:8px 9px;border-bottom:1px solid var(--border);
@@ -112,13 +112,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 
 /* nume — 2 rânduri */
 .alog-name{padding:6px 10px 5px;border-bottom:1px solid var(--border)}
-.alog-name-main{font-size:14px;font-weight:bold;
+.alog-name-main{font-size:17px;font-weight:bold;
   color:hsl(var(--chue,150),65%,62%);line-height:1.3}
-.alog-name-pn{font-size:12px;color:#a8c8d4;margin-top:2px}
+.alog-name-pn{font-size:15px;color:#a8c8d4;margin-top:2px}
 
 /* stimuli */
 .alog-stim{display:flex;align-items:center;gap:6px;padding:5px 10px;
-  font-size:12px;color:#b0ccd6;border-bottom:1px solid var(--border)}
+  font-size:15px;color:#b0ccd6;border-bottom:1px solid var(--border)}
 .alog-stimn{color:hsl(var(--chue,150),65%,62%);font-weight:bold}
 .alog-sbar{flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
 .alog-sfill{height:100%;background:hsl(var(--chue,150),55%,48%);border-radius:2px;transition:width .4s}
@@ -135,7 +135,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .alog-acts{display:flex;gap:4px;padding:6px 9px;border-top:1px solid var(--border)}
 .alog-abtn{flex:1;background:none;border:1px solid rgba(255,255,255,.12);
   color:#b0ccd6;padding:6px 2px;border-radius:3px;cursor:pointer;
-  font-family:var(--font);font-size:12px;text-transform:uppercase;
+  font-family:var(--font);font-size:15px;text-transform:uppercase;
   letter-spacing:.07em;transition:all .15s}
 .alog-abtn:hover{color:var(--glow);border-color:var(--glow);background:var(--glowfade)}
 .alog-abtn:disabled{opacity:.2;pointer-events:none}
@@ -144,9 +144,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 /* ── FOOTER ───────────────────────────────────────── */
 #footer{grid-column:1/3;border-top:1px solid var(--border);background:var(--bg2);
   display:flex;align-items:center;gap:12px;padding:0 14px;
-  font-size:11px;color:var(--dim);transition:border-top-color .5s}
+  font-size:14px;color:var(--dim);transition:border-top-color .5s}
 .stat{display:flex;align-items:center;gap:5px}
-.val{color:var(--glow);font-weight:bold;font-size:12px}
+.val{color:var(--glow);font-weight:bold;font-size:15px}
 .stat-sep{color:var(--border)}
 
 /* indicator nutrienți */
@@ -155,23 +155,23 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   background:#e74c3c;transition:background .6s;flex-shrink:0}
 #nutri-led.orange{background:#f39c12}
 #nutri-led.green{background:#2ecc71}
-#nutri-pct{font-size:10px;color:var(--dim)}
+#nutri-pct{font-size:13px;color:var(--dim)}
 
 #footer button{background:none;border:1px solid var(--border);color:var(--dim);
-  padding:5px 11px;border-radius:4px;cursor:pointer;font:inherit;font-size:10px;
+  padding:5px 11px;border-radius:4px;cursor:pointer;font:inherit;font-size:13px;
   text-transform:uppercase;letter-spacing:.1em;transition:all .15s}
 #footer button:hover{color:var(--glow);border-color:var(--glow);background:var(--glowfade)}
 #spawn-btn{margin-left:auto;color:var(--glow);border-color:rgba(46,204,154,.4)}
 #reset-btn{color:#c0392b;border-color:rgba(192,57,43,.3)}
 #reset-btn:hover{color:#e74c3c;border-color:#e74c3c;background:rgba(231,76,60,.08)!important}
-#key-wrap{display:flex;align-items:center;gap:5px;font-size:10px}
+#key-wrap{display:flex;align-items:center;gap:5px;font-size:13px}
 #key-wrap input{width:125px;background:rgba(255,255,255,.04);
   border:1px solid rgba(255,255,255,.1);color:var(--text);
-  font:inherit;font-size:10px;padding:3px 7px;border-radius:3px;outline:none}
+  font:inherit;font-size:13px;padding:3px 7px;border-radius:3px;outline:none}
 #key-wrap input:focus{border-color:rgba(46,204,154,.35)}
 #key-wrap button{background:none;border:1px solid rgba(255,255,255,.1);
   color:var(--dim);cursor:pointer;padding:3px 8px;border-radius:3px;
-  font:inherit;font-size:10px;transition:all .15s}
+  font:inherit;font-size:13px;transition:all .15s}
 #key-wrap button:hover{color:var(--glow);border-color:var(--glow)}
 
 @keyframes flash-food{0%,100%{border-top-color:var(--border)}50%{border-top-color:var(--glow)}}
@@ -191,8 +191,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 
 /* jurnal */
 .alog-journal{border-top:1px solid var(--border);padding:6px 10px;max-height:120px;overflow-y:auto}
-.alog-journal-title{font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
-.alog-journal-entry{font-size:11px;color:#c8e8d8;line-height:1.5;margin-bottom:4px;font-style:italic;
+.alog-journal-title{font-size:13px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
+.alog-journal-entry{font-size:14px;color:#c8e8d8;line-height:1.5;margin-bottom:4px;font-style:italic;
   border-left:2px solid hsla(var(--chue,150),55%,48%,.4);padding-left:6px}
 
 /* predator flash */
@@ -200,7 +200,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .aunit.being-devoured{animation:devour .8s ease forwards!important}
 
 /* autosave indicator */
-#autosave-btn{font-size:9px;color:var(--dim);border-color:rgba(255,255,255,.08)}
+#autosave-btn{font-size:12px;color:var(--dim);border-color:rgba(255,255,255,.08)}
 #autosave-btn.saved{color:#2ecc71;border-color:rgba(46,204,154,.3)}
 #autosave-btn.error{color:#e74c3c}
 
@@ -213,7 +213,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 /* ping toast */
 #ping-toast{position:fixed;bottom:54px;left:50%;transform:translateX(-50%);
   background:#0d1215;border:1px solid rgba(255,255,255,.15);
-  color:#9ab0b8;font-size:11px;padding:6px 14px;border-radius:5px;
+  color:#9ab0b8;font-size:14px;padding:6px 14px;border-radius:5px;
   font-family:'Courier New',monospace;pointer-events:none;
   opacity:0;transition:opacity .3s;z-index:1000;white-space:nowrap}
 #ping-toast.show{opacity:1}
@@ -232,7 +232,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
     <div id="sb-head">
       <h1>◉ BIOTOP</h1>
       <div id="sb-sub">lac abeomas</div>
-      <button id="autosave-btn" onclick="autosaveFile()" style="margin-top:8px;width:100%;padding:4px 0;border-radius:3px;cursor:pointer;font-family:var(--font);font-size:9px;text-transform:uppercase;letter-spacing:.1em;background:none;border:1px solid rgba(255,255,255,.08);color:var(--dim);transition:all .3s" title="Salvează colonia în fișierul biotope.html">💾 AUTOSAVE ÎN FIȘIER</button>
+      <button id="autosave-btn" onclick="autosaveFile()" style="margin-top:8px;width:100%;padding:4px 0;border-radius:3px;cursor:pointer;font-family:var(--font);font-size:12px;text-transform:uppercase;letter-spacing:.1em;background:none;border:1px solid rgba(255,255,255,.08);color:var(--dim);transition:all .3s" title="Salvează colonia în fișierul biotope.html">💾 AUTOSAVE ÎN FIȘIER</button>
     </div>
     <div id="family-list"></div>
   </aside>
