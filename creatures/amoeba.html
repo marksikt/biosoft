@@ -15,7 +15,7 @@
   --font:'Courier New',monospace;
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;user-select:none}
-#app{height:100vh;display:grid;grid-template-rows:34px 1fr 24px 60px 0px;overflow:hidden}
+#app{height:100vh;display:grid;grid-template-rows:34px 1fr 24px 60px 30px;overflow:hidden}
 
 /* header */
 #hdr{display:flex;align-items:center;gap:7px;padding:0 10px;border-bottom:1px solid rgba(255,255,255,0.05)}
@@ -66,12 +66,14 @@ body.dead #cell-area{filter:grayscale(1) brightness(.4)}
 body.dead #ctrl{opacity:.2;pointer-events:none}
 body.dead .dot{animation:none;opacity:.3}
 
-/* standalone key row */
-#key-row{display:none;align-items:center;gap:7px;padding:0 10px;border-top:1px solid rgba(255,255,255,0.04);font-size:11px;color:var(--dim)}
-body.standalone #key-row{display:flex}
+/* API key row — always visible */
+#key-row{display:flex;align-items:center;gap:7px;padding:0 10px;border-top:1px solid rgba(255,255,255,0.04);font-size:11px;color:var(--dim)}
 #key-row input{flex:1;background:none;border:1px solid rgba(255,255,255,0.09);color:var(--text);padding:3px 7px;border-radius:3px;font:inherit;font-size:11px}
 #key-row button{background:none;border:1px solid rgba(255,255,255,0.09);color:var(--dim);padding:3px 10px;border-radius:3px;cursor:pointer;font:inherit;font-size:11px;transition:all .15s}
 #key-row button:hover{color:var(--glow);border-color:var(--glow)}
+#key-row.has-key{border-top-color:rgba(46,204,154,.2)}
+#key-row.has-key input{border-color:rgba(46,204,154,.25)}
+#key-row.has-key button{color:var(--glow)}
 </style>
 </head>
 <body>
@@ -415,7 +417,12 @@ class Amoeba {
                 `Svara som ett levande cell-medvetande: poetiskt, kort, biologiskt exakt. Max 1-2 meningar.`;
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001', max_tokens: 100,
         system: sys, messages: [{ role: 'user', content: 'Vad observerar du just nu?' }]
@@ -506,13 +513,20 @@ class UI {
     window.doExport = () => this.amoeba.export(false);
     window.saveKey  = () => {
       const v = document.getElementById('api-key')?.value.trim();
-      if (v) { localStorage.setItem('ant_key', v); this.log('✓ API-nyckel sparad.', 'e'); }
+      if (v) {
+        localStorage.setItem('ant_key', v);
+        document.getElementById('key-row')?.classList.add('has-key');
+        this.log('✓ API-nyckel sparad. Claude är aktiv.', 'e');
+      }
     };
 
-    // Fyll in sparad nyckel i standalone-läge
-    if (!this.amoeba.inBiotope) {
-      const stored = localStorage.getItem('ant_key');
-      if (stored) { const el = document.getElementById('api-key'); if (el) el.value = stored; }
+    // API key — vizibil mereu, marchează dacă există
+    const stored = localStorage.getItem('ant_key');
+    const keyRow = document.getElementById('key-row');
+    const keyInput = document.getElementById('api-key');
+    if (stored && keyInput) {
+      keyInput.value = stored;
+      keyRow?.classList.add('has-key');
     }
 
     setTimeout(() => {
